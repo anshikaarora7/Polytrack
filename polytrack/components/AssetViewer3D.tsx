@@ -252,18 +252,18 @@ export default function AssetViewer3D({
   }
 
   return (
-    <div className={`relative rounded-xl overflow-hidden border border-border/50 bg-[#090d16] flex flex-col ${className}`}>
+    <div className={`relative rounded-[12px] overflow-hidden border border-border bg-surface-2 flex flex-col shadow-[var(--shadow-pop)] ${className}`}>
       {/* Top Overlay Badges */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2 pointer-events-none">
-        <span className="px-2.5 py-1 rounded-md bg-background/80 backdrop-blur-md border border-border/60 text-[11px] font-mono text-foreground flex items-center gap-1.5 shadow-sm">
-          <Box className="w-3.5 h-3.5 text-primary" />
+        <span className="px-2.5 py-1 rounded-[8px] bg-surface/90 border border-border text-[11px] font-mono text-text flex items-center gap-1.5 shadow-xs">
+          <Box className="w-3.5 h-3.5 text-accent" strokeWidth={1.75} />
           <span>{assetName}</span>
         </span>
-        <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30 text-[10px] font-mono">
+        <span className="px-2 py-0.5 rounded-[6px] bg-surface-2 border border-border text-[10px] font-mono text-text-muted">
           {category}
         </span>
         {polygonCount ? (
-          <span className="px-2 py-0.5 rounded-md bg-muted/80 text-muted-foreground text-[10px] font-mono hidden sm:inline">
+          <span className="px-2 py-0.5 rounded-[6px] bg-surface border border-border text-text-muted text-[10px] font-mono hidden sm:inline tabular-nums">
             {polygonCount.toLocaleString()} tris
           </span>
         ) : null}
@@ -277,11 +277,11 @@ export default function AssetViewer3D({
             variant="outline"
             size="sm"
             onClick={() => setWireframe(!wireframe)}
-            className={`h-7 px-2 text-[10px] font-mono rounded-lg border backdrop-blur-md transition-colors ${
-              wireframe ? 'bg-primary text-primary-foreground border-primary' : 'bg-background/80 hover:bg-muted text-muted-foreground'
+            className={`h-7 px-2 text-[10px] font-mono rounded-[8px] border transition-colors ${
+              wireframe ? 'bg-accent text-white border-accent' : 'bg-surface hover:bg-surface-2 text-text-muted'
             }`}
           >
-            <Layers className="w-3 h-3 mr-1" />
+            <Layers className="w-3 h-3 mr-1" strokeWidth={1.75} />
             {wireframe ? 'Shaded' : 'Wireframe'}
           </Button>
         )}
@@ -290,11 +290,11 @@ export default function AssetViewer3D({
           variant="outline"
           size="sm"
           onClick={() => setIsRotating(!isRotating)}
-          className={`h-7 px-2 text-[10px] font-mono rounded-lg border backdrop-blur-md transition-colors ${
-            isRotating ? 'bg-primary/20 text-primary border-primary/40' : 'bg-background/80 hover:bg-muted text-muted-foreground'
+          className={`h-7 px-2 text-[10px] font-mono rounded-[8px] border transition-colors ${
+            isRotating ? 'bg-accent-tint text-accent border-accent/30' : 'bg-surface hover:bg-surface-2 text-text-muted'
           }`}
         >
-          <RotateCcw className="w-3 h-3 mr-1" />
+          <RotateCcw className="w-3 h-3 mr-1" strokeWidth={1.75} />
           {isRotating ? 'Pause' : 'Orbit'}
         </Button>
       </div>
@@ -380,9 +380,9 @@ export default function AssetViewer3D({
       </div>
 
       {/* Footer Instruction Hint */}
-      <div className="px-3 py-1.5 bg-background/60 border-t border-border/40 flex items-center justify-between text-[10px] font-mono text-muted-foreground select-none">
+      <div className="px-3 py-1.5 bg-surface border-t border-border flex items-center justify-between text-[10px] font-mono text-text-muted select-none">
         <span>Click & Drag to Orbit • Scroll to Zoom</span>
-        <span className="text-primary">Studio PBR</span>
+        <span className="text-accent font-medium">Studio PBR</span>
       </div>
     </div>
   );

@@ -10,9 +10,6 @@ import {
   Plus,
   Upload,
   Search,
-  Filter,
-  Image as ImageIcon,
-  FileText,
   CheckCircle,
   AlertCircle,
   Clock,
@@ -22,13 +19,10 @@ import {
   Layers,
   Send,
   Sparkles,
-  MessageSquare,
   ThumbsUp,
   ThumbsDown,
   Loader2,
-  ExternalLink,
-  Tag,
-  Rotate3d
+  Rotate3d,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import AssetTurntableModal from '@/components/asset-turntable-modal';
@@ -39,7 +33,7 @@ const AssetViewer3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-72 rounded-xl bg-card/60 border border-border/50 flex items-center justify-center font-mono text-xs text-muted-foreground animate-pulse">
+      <div className="w-full h-72 rounded-[12px] bg-surface-2 border border-border flex items-center justify-center font-mono text-xs text-text-muted">
         Initializing Studio 3D Viewport...
       </div>
     ),
@@ -85,9 +79,6 @@ export default function AssetsManager() {
   const [reviewApproved, setReviewApproved] = useState(true);
   const [reviewNotes, setReviewNotes] = useState('');
 
-  // Comments state
-  const [commentText, setCommentText] = useState('');
-
   // Projects fetch
   const { data: projectsData } = useSWR('asset-projects', () => apiClient.getProjects());
   const projects = projectsData?.data || [];
@@ -112,13 +103,20 @@ export default function AssetsManager() {
     () => (selectedAsset?.id ? apiClient.getAssetById(selectedAsset.id) : null)
   );
 
-  const statusColors: Record<string, string> = {
-    draft: 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30',
-    submitted: 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-[0_0_8px_rgba(59,130,246,0.2)]',
-    review: 'bg-purple-500/10 text-purple-400 border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.2)]',
-    approved: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.25)]',
-    rejected: 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.2)]',
-    archived: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  const getStatusDot = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return 'bg-success';
+      case 'submitted':
+        return 'bg-info';
+      case 'review':
+        return 'bg-warning';
+      case 'rejected':
+        return 'bg-danger';
+      case 'draft':
+      default:
+        return 'bg-text-muted';
+    }
   };
 
   const handleCreateAsset = async (e: React.FormEvent) => {
@@ -136,7 +134,7 @@ export default function AssetsManager() {
         .map((t) => t.trim())
         .filter(Boolean);
 
-      const res = await apiClient.createAsset({
+      await apiClient.createAsset({
         name: createForm.name,
         description: createForm.description || undefined,
         category: createForm.category,
@@ -234,7 +232,6 @@ export default function AssetsManager() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
     const downloadUrl = apiClient.getAssetDownloadUrl(assetId, versionId);
     
-    // Trigger browser download via fetch with auth header
     fetch(downloadUrl, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -256,17 +253,17 @@ export default function AssetsManager() {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-foreground">3D Asset Management</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/20 text-primary font-semibold border border-primary/30">
+            <h1 className="text-2xl font-semibold tracking-[-0.01em] text-text">3D Asset Management</h1>
+            <span className="text-xs px-2 py-0.5 rounded-[8px] bg-accent-tint text-accent font-medium border border-border">
               Studio Storage
             </span>
           </div>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-text-muted mt-0.5">
             Store, version, inspect, and approve .blend, .fbx, and 3D textures
           </p>
         </div>
@@ -279,32 +276,32 @@ export default function AssetsManager() {
               }
               setShowCreateModal(true);
             }}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 text-sm"
+            className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5 text-sm h-9 px-3.5 shadow-none"
           >
-            <Plus className="w-4 h-4" />
-            New 3D Asset
+            <Plus className="w-4 h-4" strokeWidth={1.75} />
+            <span>New 3D Asset</span>
           </Button>
         </div>
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
+        <div className="p-3 bg-success/10 border border-success/30 rounded-[8px] text-success text-xs flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
           <span>{statusMessage}</span>
         </div>
       )}
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-card/60 p-3.5 rounded-xl border border-border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-surface p-3 rounded-[8px] border border-border shadow-[var(--shadow-pop)]">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" strokeWidth={1.75} />
           <input
             type="text"
             placeholder="Search assets or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full pl-9 pr-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
 
@@ -312,7 +309,7 @@ export default function AssetsManager() {
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="all">All Categories</option>
           <option value="Prop">Props & Objects</option>
@@ -327,7 +324,7 @@ export default function AssetsManager() {
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="all">All Statuses</option>
           <option value="Draft">Draft</option>
@@ -341,7 +338,7 @@ export default function AssetsManager() {
         <select
           value={selectedProjectId}
           onChange={(e) => setSelectedProjectId(e.target.value)}
-          className="px-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="">All Projects</option>
           {projects.map((p: any) => (
@@ -357,11 +354,11 @@ export default function AssetsManager() {
         {isLoading ? (
           <>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <Card key={i} className="p-6 border-border/50 bg-card/40 animate-pulse">
+              <Card key={i} className="p-5 border border-border bg-surface rounded-[12px] animate-pulse">
                 <div className="space-y-3">
-                  <div className="h-32 bg-muted rounded-lg" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-3 bg-muted rounded w-1/2" />
+                  <div className="h-32 bg-surface-2 rounded-[8px]" />
+                  <div className="h-4 bg-surface-2 rounded-[8px] w-3/4" />
+                  <div className="h-3 bg-surface-2 rounded-[8px] w-1/2" />
                 </div>
               </Card>
             ))}
@@ -369,49 +366,51 @@ export default function AssetsManager() {
         ) : assets.length > 0 ? (
           assets.map((asset: any) => {
             const sKey = (asset.status || 'draft').toLowerCase();
-            const badgeClass = statusColors[sKey] || statusColors['draft'];
 
             return (
               <Card
                 key={asset.id}
                 onClick={() => setSelectedAsset(asset)}
-                className="overflow-hidden border-border/50 bg-card/50 hover:bg-card/90 hover:border-primary/50 cursor-pointer transition-all shadow-sm flex flex-col justify-between"
+                className="overflow-hidden border border-border bg-surface hover:border-accent/40 rounded-[12px] cursor-pointer transition-colors shadow-[var(--shadow-pop)] flex flex-col justify-between"
               >
                 <div>
                   {/* 3D Asset Preview Banner */}
-                  <div className="h-36 bg-gradient-to-br from-primary/10 via-card to-accent/10 border-b border-border/30 flex items-center justify-center relative p-4 group">
-                    <Box className="w-12 h-12 text-primary/40 group-hover:scale-110 transition-transform duration-300" />
-                    <span
-                      className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${badgeClass}`}
-                    >
-                      {asset.status}
-                    </span>
-                    <span className="absolute bottom-2.5 left-2.5 text-[10px] px-2 py-0.5 rounded bg-black/40 text-muted-foreground backdrop-blur-sm">
+                  <div className="h-32 bg-surface-2 border-b border-border flex items-center justify-center relative p-4 group">
+                    <Box className="w-10 h-10 text-text-muted/40 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.75} />
+                    
+                    {/* Linear Status Dot */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2 py-0.5 rounded-[8px] bg-surface border border-border text-[11px] font-medium text-text">
+                      <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(sKey)}`} />
+                      <span className="capitalize">{asset.status}</span>
+                    </div>
+
+                    <span className="absolute bottom-2.5 left-2.5 text-[10px] px-1.5 py-0.2 rounded-[6px] bg-surface border border-border text-text-muted">
                       {asset.category}
                     </span>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setTurntableAsset(asset);
                       }}
-                      className="absolute bottom-2.5 right-2.5 px-2 py-1 rounded-md bg-black/70 hover:bg-primary text-white text-[10px] font-semibold flex items-center gap-1 backdrop-blur-sm transition-all border border-white/10 shadow-md"
+                      className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-[6px] bg-surface hover:bg-surface-2 text-text text-[10px] font-medium flex items-center gap-1 border border-border transition-colors shadow-xs"
                     >
-                      <Rotate3d className="w-3 h-3 text-primary group-hover:text-white" />
+                      <Rotate3d className="w-3 h-3 text-accent" strokeWidth={1.75} />
                       <span>3D View</span>
                     </button>
                   </div>
 
                   {/* Info */}
-                  <div className="p-4 space-y-2">
-                    <h3 className="font-semibold text-foreground text-sm truncate">{asset.name}</h3>
+                  <div className="p-3.5 space-y-2">
+                    <h3 className="font-semibold text-text text-sm truncate">{asset.name}</h3>
 
                     {asset.tags && asset.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {asset.tags.slice(0, 3).map((tag: string) => (
                           <span
                             key={tag}
-                            className="text-[10px] px-1.5 py-0.2 rounded bg-muted/60 text-muted-foreground font-mono"
+                            className="text-[10px] px-1.5 py-0.2 rounded bg-surface-2 border border-border text-text-muted font-mono"
                           >
                             #{tag}
                           </span>
@@ -419,27 +418,27 @@ export default function AssetsManager() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/20">
-                      <span>V{asset.versionCount || 1} Published</span>
+                    <div className="flex items-center justify-between text-xs text-text-muted pt-2 border-t border-border">
+                      <span className="tabular-nums">V{asset.versionCount || 1} Published</span>
                       <span>{new Date(asset.updatedAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-muted/20 border-t border-border/30 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground truncate max-w-[120px]">
+                <div className="p-2.5 bg-surface-2 border-t border-border flex items-center justify-between text-xs">
+                  <span className="text-text-muted truncate max-w-[120px]">
                     {asset.createdBy?.name || 'Studio Team'}
                   </span>
-                  <span className="text-primary font-semibold hover:underline">View Asset →</span>
+                  <span className="text-accent font-medium hover:underline">View Asset →</span>
                 </div>
               </Card>
             );
           })
         ) : (
-          <div className="col-span-full text-center py-16 border border-dashed border-border/40 rounded-xl bg-card/20">
-            <Box className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-foreground font-medium text-sm">No 3D assets found</p>
-            <p className="text-muted-foreground text-xs mt-1">
+          <div className="col-span-full text-center py-16 border border-dashed border-border rounded-[12px] bg-surface-2/30">
+            <Box className="w-10 h-10 text-text-muted/40 mx-auto mb-2" strokeWidth={1.75} />
+            <p className="text-text font-medium text-sm">No 3D assets found</p>
+            <p className="text-text-muted text-xs mt-1">
               Click &quot;New 3D Asset&quot; to register and upload .blend, .fbx or texture files.
             </p>
           </div>
@@ -448,13 +447,13 @@ export default function AssetsManager() {
 
       {/* Modal: Create 3D Asset */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg p-6 bg-card border-border shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground">Register New 3D Asset</h2>
+              <h2 className="text-base font-semibold text-text">Register New 3D Asset</h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="text-text-muted hover:text-text text-sm p-1"
               >
                 ✕
               </button>
@@ -462,14 +461,14 @@ export default function AssetsManager() {
 
             <form onSubmit={handleCreateAsset} className="space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Target Project *
                 </label>
                 <select
                   required
                   value={createForm.projectId}
                   onChange={(e) => setCreateForm({ ...createForm, projectId: e.target.value })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                  className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 >
                   {projects.map((p: any) => (
                     <option key={p.id} value={p.id}>
@@ -480,7 +479,7 @@ export default function AssetsManager() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Asset Name *
                 </label>
                 <input
@@ -489,19 +488,19 @@ export default function AssetsManager() {
                   placeholder="e.g. Cyberpunk Vending Machine"
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                  className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Category *
                   </label>
                   <select
                     value={createForm.category}
                     onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   >
                     <option value="Prop">Prop</option>
                     <option value="Character">Character</option>
@@ -514,7 +513,7 @@ export default function AssetsManager() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Tags (comma-separated)
                   </label>
                   <input
@@ -522,13 +521,13 @@ export default function AssetsManager() {
                     placeholder="hardsurface, sci-fi"
                     value={createForm.tags}
                     onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Description
                 </label>
                 <textarea
@@ -536,7 +535,7 @@ export default function AssetsManager() {
                   placeholder="Asset description, polycount targets, LODs, PBR texture expectations..."
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                  className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
 
@@ -545,14 +544,14 @@ export default function AssetsManager() {
                   type="button"
                   variant="outline"
                   onClick={() => setShowCreateModal(false)}
-                  className="text-xs"
+                  className="rounded-[8px] text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                  className="rounded-[8px] bg-accent hover:bg-accent-hover text-white text-xs"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Asset'}
                 </Button>
@@ -564,38 +563,34 @@ export default function AssetsManager() {
 
       {/* Modal: Asset Detail Drawer */}
       {selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-card border-border shadow-2xl flex flex-col justify-between space-y-5">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] flex flex-col justify-between space-y-4">
             <div>
               {/* Header */}
               <div className="flex items-start justify-between pb-3 border-b border-border">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xl font-bold text-foreground">{assetDetail?.name || selectedAsset.name}</h2>
-                    <span
-                      className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border capitalize ${
-                        statusColors[(assetDetail?.status || selectedAsset.status || '').toLowerCase()] ||
-                        statusColors['draft']
-                      }`}
-                    >
-                      {assetDetail?.status || selectedAsset.status}
-                    </span>
+                    <h2 className="text-lg font-semibold text-text">{assetDetail?.name || selectedAsset.name}</h2>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[8px] bg-surface-2 border border-border text-xs text-text font-medium">
+                      <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(assetDetail?.status || selectedAsset.status || '')}`} />
+                      <span className="capitalize">{assetDetail?.status || selectedAsset.status}</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setTurntableAsset(assetDetail || selectedAsset)}
-                      className="px-2.5 py-0.5 rounded-md bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                      className="px-2 py-0.5 rounded-[8px] bg-accent-tint hover:bg-accent hover:text-white text-accent border border-accent/20 text-xs font-medium inline-flex items-center gap-1 transition-colors"
                     >
-                      <Rotate3d className="w-3.5 h-3.5" />
+                      <Rotate3d className="w-3.5 h-3.5" strokeWidth={1.75} />
                       <span>3D Turntable</span>
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-text-muted mt-0.5">
                     {assetDetail?.projectName || selectedAsset.projectName} • {assetDetail?.category || selectedAsset.category}
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedAsset(null)}
-                  className="text-muted-foreground hover:text-foreground text-sm"
+                  className="text-text-muted hover:text-text text-sm p-1"
                 >
                   ✕
                 </button>
@@ -603,7 +598,7 @@ export default function AssetsManager() {
 
               {/* Description */}
               {assetDetail?.description && (
-                <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                <p className="text-xs text-text-muted mt-2.5 leading-relaxed">
                   {assetDetail.description}
                 </p>
               )}
@@ -627,20 +622,20 @@ export default function AssetsManager() {
                   polygonCount={
                     assetDetail?.versions?.[0]?.polygonCount || selectedAsset?.polygonCount || 24500
                   }
-                  className="w-full h-72"
+                  className="w-full h-72 rounded-[12px]"
                   autoRotate={true}
                 />
               </div>
 
               {/* Review & Upload Action Bar */}
-              <div className="mt-4 p-3 bg-card/80 border border-border rounded-xl flex flex-wrap items-center justify-between gap-3">
+              <div className="mt-4 p-3 bg-surface-2 border border-border rounded-[8px] flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     onClick={() => setShowUploadModal(true)}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs flex items-center gap-1.5"
+                    className="rounded-[8px] bg-accent hover:bg-accent-hover text-white text-xs flex items-center gap-1.5 h-8"
                   >
-                    <Upload className="w-3.5 h-3.5" />
+                    <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
                     Upload Version
                   </Button>
 
@@ -651,9 +646,9 @@ export default function AssetsManager() {
                       variant="outline"
                       onClick={handleSubmitForReview}
                       disabled={isSubmitting}
-                      className="text-xs flex items-center gap-1.5 border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                      className="rounded-[8px] text-xs flex items-center gap-1.5 h-8"
                     >
-                      <Send className="w-3.5 h-3.5" />
+                      <Send className="w-3.5 h-3.5" strokeWidth={1.75} />
                       Submit for Review
                     </Button>
                   )}
@@ -675,9 +670,9 @@ export default function AssetsManager() {
                           setReviewApproved(true);
                           setShowReviewModal(true);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex items-center gap-1"
+                        className="rounded-[8px] bg-success hover:bg-success/90 text-white text-xs flex items-center gap-1 h-8"
                       >
-                        <ThumbsUp className="w-3 h-3" />
+                        <ThumbsUp className="w-3 h-3" strokeWidth={1.75} />
                         Approve
                       </Button>
                       <Button
@@ -686,9 +681,9 @@ export default function AssetsManager() {
                           setReviewApproved(false);
                           setShowReviewModal(true);
                         }}
-                        className="bg-red-600 hover:bg-red-500 text-white text-xs flex items-center gap-1"
+                        className="rounded-[8px] bg-danger hover:bg-danger/90 text-white text-xs flex items-center gap-1 h-8"
                       >
-                        <ThumbsDown className="w-3 h-3" />
+                        <ThumbsDown className="w-3 h-3" strokeWidth={1.75} />
                         Reject
                       </Button>
                     </div>
@@ -696,14 +691,14 @@ export default function AssetsManager() {
               </div>
 
               {/* Version History Table */}
-              <div className="mt-5 space-y-3">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5" /> Version History ({assetDetail?.versions?.length || 0})
+              <div className="mt-4 space-y-2">
+                <h3 className="text-xs font-semibold text-text uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-accent" strokeWidth={1.75} /> Version History ({assetDetail?.versions?.length || 0})
                 </h3>
 
-                <div className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="border border-border rounded-[8px] overflow-hidden">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-muted/40 border-b border-border/40 text-muted-foreground">
+                    <thead className="bg-surface-2 border-b border-border text-text-muted">
                       <tr>
                         <th className="p-2.5">Version</th>
                         <th className="p-2.5">File Name</th>
@@ -713,25 +708,22 @@ export default function AssetsManager() {
                         <th className="p-2.5 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/30">
+                    <tbody className="divide-y divide-border">
                       {assetDetail?.versions?.length ? (
                         assetDetail.versions.map((ver: any) => (
-                          <tr key={ver.id} className="hover:bg-card/50 transition-colors">
-                            <td className="p-2.5 font-bold text-primary">V{ver.versionNumber}</td>
-                            <td className="p-2.5 font-mono text-foreground">{ver.fileName}</td>
-                            <td className="p-2.5 text-muted-foreground">
+                          <tr key={ver.id} className="hover:bg-surface-2 transition-colors">
+                            <td className="p-2.5 font-semibold text-accent">V{ver.versionNumber}</td>
+                            <td className="p-2.5 font-mono text-text">{ver.fileName}</td>
+                            <td className="p-2.5 text-text-muted tabular-nums">
                               {ver.polygonCount ? `${ver.polygonCount.toLocaleString()} polys` : '—'}
                             </td>
                             <td className="p-2.5 capitalize">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                  statusColors[(ver.status || 'draft').toLowerCase()] || ''
-                                }`}
-                              >
-                                {ver.status}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(ver.status || 'draft')}`} />
+                                <span>{ver.status}</span>
+                              </div>
                             </td>
-                            <td className="p-2.5 text-muted-foreground">
+                            <td className="p-2.5 text-text-muted">
                               {new Date(ver.uploadedAt).toLocaleDateString()}
                             </td>
                             <td className="p-2.5 text-right">
@@ -739,9 +731,9 @@ export default function AssetsManager() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleDownloadVersion(selectedAsset.id, ver.id, ver.fileName)}
-                                className="h-6 text-[10px] px-2 flex items-center gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                                className="h-6 text-[10px] px-2 rounded-[6px] flex items-center gap-1"
                               >
-                                <Download className="w-3 h-3" />
+                                <Download className="w-3 h-3" strokeWidth={1.75} />
                                 Download
                               </Button>
                             </td>
@@ -749,7 +741,7 @@ export default function AssetsManager() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                          <td colSpan={6} className="p-4 text-center text-text-muted text-xs">
                             No version files uploaded yet. Click &quot;Upload Version&quot; above.
                           </td>
                         </tr>
@@ -760,8 +752,8 @@ export default function AssetsManager() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-border flex justify-end">
-              <Button size="sm" variant="outline" onClick={() => setSelectedAsset(null)} className="text-xs">
+            <div className="pt-3 border-t border-border flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => setSelectedAsset(null)} className="rounded-[8px] text-xs">
                 Close
               </Button>
             </div>
@@ -771,13 +763,13 @@ export default function AssetsManager() {
 
       {/* Modal: Upload Version */}
       {showUploadModal && selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 bg-card border-border shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="text-base font-bold text-foreground">Upload 3D File Version</h2>
+              <h2 className="text-base font-semibold text-text">Upload 3D File Version</h2>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="text-text-muted hover:text-text text-sm p-1"
               >
                 ✕
               </button>
@@ -785,7 +777,7 @@ export default function AssetsManager() {
 
             <form onSubmit={handleUploadVersion} className="space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Select 3D File (.blend, .fbx, .obj, .glb) *
                 </label>
                 <input
@@ -793,37 +785,37 @@ export default function AssetsManager() {
                   type="file"
                   accept=".blend,.fbx,.obj,.glb,.png,.jpg"
                   onChange={(e) => setVersionFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 cursor-pointer"
+                  className="w-full text-xs text-text file:mr-2 file:py-1 file:px-2.5 file:rounded-[6px] file:border-0 file:text-xs file:bg-surface file:border file:border-border file:text-text hover:file:bg-surface-2 cursor-pointer"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Polygon Count
                   </label>
                   <input
                     type="number"
                     value={versionPolys}
                     onChange={(e) => setVersionPolys(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-xs"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Materials
                   </label>
                   <input
                     type="number"
                     value={versionMaterials}
                     onChange={(e) => setVersionMaterials(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-input border border-border rounded-lg text-foreground text-xs"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Revision Notes
                 </label>
                 <textarea
@@ -831,7 +823,7 @@ export default function AssetsManager() {
                   placeholder="What changed in this revision (e.g. fixed manifold geometry, UDIM textures baked)..."
                   value={versionNotes}
                   onChange={(e) => setVersionNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-xs"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-[8px] text-text text-xs resize-none focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -840,14 +832,14 @@ export default function AssetsManager() {
                   type="button"
                   variant="outline"
                   onClick={() => setShowUploadModal(false)}
-                  className="text-xs"
+                  className="rounded-[8px] text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                  className="rounded-[8px] bg-accent hover:bg-accent-hover text-white text-xs"
                 >
                   {isSubmitting ? 'Uploading to Studio...' : 'Upload File'}
                 </Button>
@@ -859,29 +851,29 @@ export default function AssetsManager() {
 
       {/* Modal: Review Approval/Rejection */}
       {showReviewModal && selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 bg-card border-border shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="text-base font-bold text-foreground">
+              <h2 className="text-base font-semibold text-text">
                 {reviewApproved ? 'Approve 3D Asset' : 'Reject Asset with Feedback'}
               </h2>
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="text-text-muted hover:text-text text-sm p-1"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleReviewDecision} className="space-y-4 text-sm">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-text-muted">
                 {reviewApproved
                   ? 'Mark this asset as Approved. The artist will be notified and this version will be locked for production handoff.'
                   : 'Reject this asset. Please provide constructive feedback on topology, UVs, textures, or performance targets.'}
               </p>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Review Feedback Notes
                 </label>
                 <textarea
@@ -894,7 +886,7 @@ export default function AssetsManager() {
                   }
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-xs"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-[8px] text-text text-xs resize-none focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -903,18 +895,16 @@ export default function AssetsManager() {
                   type="button"
                   variant="outline"
                   onClick={() => setShowReviewModal(false)}
-                  className="text-xs"
+                  className="rounded-[8px] text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className={
-                    reviewApproved
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white text-xs'
-                      : 'bg-red-600 hover:bg-red-500 text-white text-xs'
-                  }
+                  className={`rounded-[8px] text-white text-xs ${
+                    reviewApproved ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
+                  }`}
                 >
                   {isSubmitting ? 'Recording...' : reviewApproved ? 'Confirm Approval' : 'Confirm Rejection'}
                 </Button>

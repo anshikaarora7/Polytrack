@@ -1,11 +1,17 @@
-import { Analytics } from '@vercel/analytics/next'
-import type { Metadata, Viewport } from 'next'
-import './globals.css'
+import { Analytics } from '@vercel/analytics/next';
+import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
-  title: 'ProjectHub - Project Management Dashboard',
-  description: 'Manage projects, tasks, assets, and team workload efficiently with ProjectHub',
-  generator: 'v0.app',
+  title: 'PolyTrack — 3D Studio Production Tracking',
+  description: 'Precision studio project and asset tracking system for high-performance 3D teams',
   icons: {
     icon: [
       {
@@ -23,24 +29,50 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-}
+};
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#000000',
-}
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fafafa' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f1011' },
+  ],
+};
+
+const themeScript = `
+(function() {
+  try {
+    var stored = localStorage.getItem('polytrack-theme-storage');
+    var theme = 'system';
+    if (stored) {
+      var parsed = JSON.parse(stored);
+      theme = parsed.state && parsed.state.theme ? parsed.state.theme : 'system';
+    }
+    var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  } catch (e) {}
+})();
+`;
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark bg-background">
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="font-sans antialiased bg-bg text-text min-h-screen selection:bg-accent/15 selection:text-accent">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
-  )
+  );
 }

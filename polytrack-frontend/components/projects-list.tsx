@@ -6,7 +6,17 @@ import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, FolderOpen, Calendar, Users, Loader2 } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  FolderOpen,
+  Calendar,
+  Users,
+  Loader2,
+  AlertCircle,
+  Clock,
+  ArrowUpRight,
+} from 'lucide-react';
 
 export default function ProjectsList() {
   const { data: projectsData, mutate, isLoading } = useSWR('projects', () => apiClient.getProjects());
@@ -31,21 +41,21 @@ export default function ProjectsList() {
     (p.projectCode && p.projectCode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const statusColors: Record<string, string> = {
-    active: 'bg-emerald-500/20 text-emerald-400',
-    planning: 'bg-blue-500/20 text-blue-400',
-    draft: 'bg-yellow-500/20 text-yellow-400',
-    completed: 'bg-blue-500/20 text-blue-400',
-    onhold: 'bg-amber-500/20 text-amber-400',
-    cancelled: 'bg-red-500/20 text-red-400',
-  };
-
-  const priorityColors: Record<string, string> = {
-    critical: 'text-destructive',
-    high: 'text-destructive',
-    normal: 'text-foreground',
-    medium: 'text-yellow-500',
-    low: 'text-emerald-500',
+  const getStatusDot = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'bg-success';
+      case 'planning':
+      case 'completed':
+        return 'bg-info';
+      case 'draft':
+      case 'onhold':
+        return 'bg-warning';
+      case 'cancelled':
+        return 'bg-danger';
+      default:
+        return 'bg-text-muted';
+    }
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -83,32 +93,34 @@ export default function ProjectsList() {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Projects</h1>
-          <p className="text-muted-foreground mt-1">Manage and track all production projects & milestones</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.01em] text-text">Projects</h1>
+          <p className="text-sm text-text-muted mt-0.5">
+            Manage production milestones, budgets, and track team progress
+          </p>
         </div>
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2"
+          className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5 text-sm h-9 px-3.5 shadow-none"
         >
-          <Plus className="w-4 h-4" />
-          New Project
+          <Plus className="w-4 h-4" strokeWidth={1.75} />
+          <span>New Project</span>
         </Button>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" strokeWidth={1.75} />
           <input
             type="text"
             placeholder="Search projects by name or code..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+            className="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-[8px] text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
       </div>
@@ -118,11 +130,11 @@ export default function ProjectsList() {
         {isLoading ? (
           <>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="p-6 border-border/50 bg-card/50 animate-pulse">
+              <Card key={i} className="p-5 border border-border bg-surface rounded-[12px] animate-pulse">
                 <div className="space-y-3">
-                  <div className="h-6 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-2/3" />
+                  <div className="h-5 bg-surface-2 rounded-[8px] w-3/4" />
+                  <div className="h-3.5 bg-surface-2 rounded-[8px] w-full" />
+                  <div className="h-3.5 bg-surface-2 rounded-[8px] w-2/3" />
                 </div>
               </Card>
             ))}
@@ -130,57 +142,56 @@ export default function ProjectsList() {
         ) : filteredProjects.length > 0 ? (
           filteredProjects.map((project: any) => {
             const sKey = (project.status || '').toLowerCase();
-            const pKey = (project.priority || '').toLowerCase();
 
             return (
-              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block">
-                <Card className="p-6 border-border/50 bg-card/50 hover:border-primary/50 transition-all cursor-pointer group h-full flex flex-col justify-between">
+              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block group">
+                <Card className="p-5 border border-border bg-surface hover:border-accent/40 rounded-[12px] transition-all cursor-pointer shadow-[var(--shadow-pop)] h-full flex flex-col justify-between">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                          <h3 className="text-base font-semibold text-text group-hover:text-accent transition-colors truncate">
                             {project.name}
                           </h3>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" strokeWidth={1.75} />
                         </div>
                         {project.projectCode && (
-                          <span className="text-xs font-mono text-muted-foreground">
+                          <span className="text-xs font-mono text-text-muted">
                             {project.projectCode}
                           </span>
                         )}
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        <p className="text-xs text-text-muted mt-1 line-clamp-2">
                           {project.description || (project.clientName ? `Client: ${project.clientName}` : 'Production Project')}
                         </p>
                       </div>
-                      <div
-                        className={`px-2 py-1 rounded text-xs font-medium shrink-0 ${
-                          statusColors[sKey] || 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {project.status}
+
+                      {/* Linear Status Dot */}
+                      <div className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded-[8px] bg-surface-2 border border-border text-xs text-text-muted font-medium">
+                        <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(sKey)}`} />
+                        <span className="capitalize">{project.status || 'Active'}</span>
                       </div>
                     </div>
 
                     {/* Progress Bar */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">Progress</span>
-                        <span className="text-xs font-medium text-foreground">
+                      <div className="flex items-center justify-between mb-1.5 text-xs">
+                        <span className="text-text-muted">Progress</span>
+                        <span className="font-medium text-text tabular-nums">
                           {project.completionPercent || 0}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-border rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden border border-border/50">
                         <div
-                          className="h-full bg-primary transition-all"
+                          className="h-full bg-accent transition-all duration-300"
                           style={{ width: `${project.completionPercent || 0}%` }}
                         />
                       </div>
                     </div>
 
                     {/* Meta Info */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/30">
+                    <div className="flex items-center justify-between text-xs text-text-muted pt-3 border-t border-border">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
+                        <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} />
                         <span>
                           {project.endDate
                             ? new Date(project.endDate).toLocaleDateString()
@@ -188,11 +199,11 @@ export default function ProjectsList() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{project.taskCount || 0} tasks</span>
+                        <Users className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        <span className="tabular-nums">{project.taskCount || 0} tasks</span>
                       </div>
-                      <div className={`${priorityColors[pKey] || 'text-muted-foreground'} font-medium`}>
-                        {project.priority}
+                      <div className="font-medium text-text-muted capitalize">
+                        {project.priority || 'Normal'}
                       </div>
                     </div>
                   </div>
@@ -201,25 +212,26 @@ export default function ProjectsList() {
             );
           })
         ) : (
-          <div className="col-span-full text-center py-12">
-            <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No projects found</p>
+          <div className="col-span-full text-center py-12 border border-dashed border-border rounded-[12px] bg-surface-2/30">
+            <FolderOpen className="w-10 h-10 text-text-muted mx-auto mb-2 opacity-50" strokeWidth={1.75} />
+            <p className="text-sm font-medium text-text">No projects found</p>
+            <p className="text-xs text-text-muted mt-1">Create a new project to start tracking production milestones.</p>
           </div>
         )}
       </div>
 
       {/* Modal: Create Project */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg p-6 bg-card border-border shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-primary" />
+              <h2 className="text-base font-semibold text-text flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-accent" strokeWidth={1.75} />
                 Create New Project
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="text-text-muted hover:text-text text-sm p-1"
               >
                 ✕
               </button>
@@ -228,7 +240,7 @@ export default function ProjectsList() {
             <form onSubmit={handleCreateProject} className="space-y-4 mt-4 text-sm">
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Project Name *
                   </label>
                   <input
@@ -236,46 +248,46 @@ export default function ProjectsList() {
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                     placeholder="e.g. Cyberpunk Alley Scene"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Code
                   </label>
                   <input
                     type="text"
                     value={form.projectCode}
                     onChange={(e) => setForm({ ...form, projectCode: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                     placeholder="e.g. CAS"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
+                <label className="block text-xs font-medium text-text mb-1">
                   Description
                 </label>
                 <textarea
                   rows={2}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm resize-none"
+                  className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   placeholder="Project scope and goals..."
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Type
                   </label>
                   <select
                     value={form.projectType}
                     onChange={(e) => setForm({ ...form, projectType: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   >
                     <option value="Environment">Environment</option>
                     <option value="Character">Character</option>
@@ -285,13 +297,13 @@ export default function ProjectsList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Priority
                   </label>
                   <select
                     value={form.priority}
                     onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   >
                     <option value="Low">Low</option>
                     <option value="Normal">Normal</option>
@@ -300,39 +312,39 @@ export default function ProjectsList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Budget ($)
                   </label>
                   <input
                     type="number"
                     value={form.budgetAmount}
                     onChange={(e) => setForm({ ...form, budgetAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={form.startDate}
                     onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
+                  <label className="block text-xs font-medium text-text mb-1">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={form.endDate}
                     onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                   />
                 </div>
               </div>
@@ -343,6 +355,7 @@ export default function ProjectsList() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowCreateModal(false)}
+                  className="rounded-[8px] border-border text-text hover:bg-surface-2"
                 >
                   Cancel
                 </Button>
@@ -350,9 +363,9 @@ export default function ProjectsList() {
                   type="submit"
                   size="sm"
                   disabled={isSubmitting}
-                  className="bg-primary text-primary-foreground flex items-center gap-1.5"
+                  className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5"
                 >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />}
                   Create Project
                 </Button>
               </div>

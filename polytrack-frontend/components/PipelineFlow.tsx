@@ -9,7 +9,6 @@ import {
   Bone,
   Eye,
   CheckCircle2,
-  ChevronRight,
   Sparkles
 } from 'lucide-react';
 
@@ -25,65 +24,57 @@ interface StageInfo {
   id: PipelineStageName;
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   color: string;
-  glow: string;
 }
 
 const STAGES: StageInfo[] = [
   {
     id: 'Concept',
     label: 'Concept',
-    description: 'Art direction, moodboards & initial silhouettes',
+    description: 'Art direction & moodboards',
     icon: Lightbulb,
-    color: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
-    glow: 'rgba(251, 191, 36, 0.4)',
+    color: 'text-warning bg-warning/10 border-border',
   },
   {
     id: 'Model',
     label: 'Model',
-    description: 'High-poly sculpting, retopology & UV unwrap',
+    description: 'High-poly sculpting & topology',
     icon: Box,
-    color: 'text-blue-400 border-blue-500/40 bg-blue-500/10',
-    glow: 'rgba(96, 165, 250, 0.4)',
+    color: 'text-info bg-info/10 border-border',
   },
   {
     id: 'Texture',
     label: 'Texture',
-    description: 'PBR shading, albedo, normal & roughness maps',
+    description: 'PBR maps & material sets',
     icon: Palette,
-    color: 'text-purple-400 border-purple-500/40 bg-purple-500/10',
-    glow: 'rgba(192, 132, 252, 0.4)',
+    color: 'text-accent bg-accent-tint border-border',
   },
   {
     id: 'Rig',
     label: 'Rig',
-    description: 'Skeleton deformation, skin weighting & constraints',
+    description: 'Deformations & constraints',
     icon: Bone,
-    color: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10',
-    glow: 'rgba(56, 189, 248, 0.4)',
+    color: 'text-text-secondary bg-surface-2 border-border',
   },
   {
     id: 'Review',
     label: 'Review',
-    description: 'Turntable inspection & art director feedback',
+    description: 'Turntable QA & inspection',
     icon: Eye,
-    color: 'text-pink-400 border-pink-500/40 bg-pink-500/10',
-    glow: 'rgba(244, 114, 182, 0.4)',
+    color: 'text-warning bg-warning/10 border-border',
   },
   {
     id: 'Approved',
     label: 'Approved',
-    description: 'Final production sign-off & engine export',
+    description: 'Production sign-off & release',
     icon: CheckCircle2,
-    color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-    glow: 'rgba(52, 211, 153, 0.5)',
+    color: 'text-success bg-success/10 border-border',
   },
 ];
 
-// Helper to normalize any incoming status to a stage index (0 to 5)
 function getStageIndex(stageInput?: string): number {
-  if (!stageInput) return 1; // Default to 'Model'
+  if (!stageInput) return 1;
   const s = stageInput.trim().toLowerCase();
 
   if (s.includes('concept') || s.includes('idea') || s.includes('pre')) return 0;
@@ -104,129 +95,79 @@ export default function PipelineFlow({
   const currentIndex = getStageIndex(currentStage);
 
   return (
-    <div className={`p-4 rounded-xl border border-border/60 bg-card/40 backdrop-blur-md ${className}`}>
+    <div className={`p-4 rounded-[12px] border border-border bg-surface shadow-[var(--shadow-pop)] ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-border/40">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Asset Production Pipeline
-            </h4>
-            <p className="text-[11px] text-muted-foreground">
-              Current Stage: <span className="font-semibold text-primary">{STAGES[currentIndex]?.label}</span>
-            </p>
-          </div>
+          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <h3 className="text-xs font-semibold text-text uppercase tracking-wider">
+            3D Asset Pipeline
+          </h3>
+          <span className="text-[11px] text-text-muted">
+            • Current: <strong className="text-text font-medium">{STAGES[currentIndex]?.label}</strong>
+          </span>
         </div>
 
-        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30">
-          Step {currentIndex + 1} of {STAGES.length}
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-surface-2 text-text-muted border border-border">
+          {currentIndex + 1} / {STAGES.length}
         </span>
       </div>
 
       {/* Nodes and Flow Path */}
-      <div className="relative flex items-center justify-between py-2 overflow-x-auto gap-2 sm:gap-0">
+      <div className="relative flex items-center justify-between py-1 overflow-x-auto gap-2 sm:gap-0">
         {STAGES.map((stage, idx) => {
           const Icon = stage.icon;
           const isCompleted = idx < currentIndex;
           const isCurrent = idx === currentIndex;
-          const isUpcoming = idx > currentIndex;
 
           return (
             <React.Fragment key={stage.id}>
               {/* Stage Node */}
               <div className="flex flex-col items-center relative z-10 shrink-0 group">
                 {/* Node Circle */}
-                <motion.div
-                  initial={false}
-                  animate={{
-                    scale: isCurrent ? 1.15 : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2 transition-all shadow-md relative ${
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all text-xs ${
                     isCompleted
-                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
+                      ? 'bg-success/10 border-success/30 text-success'
                       : isCurrent
-                      ? `${stage.color} ring-4 ring-primary/20`
-                      : 'bg-muted/40 border-border/60 text-muted-foreground/60'
+                      ? 'bg-accent text-white border-accent shadow-sm'
+                      : 'bg-surface-2 border-border text-text-muted'
                   }`}
-                  style={{
-                    boxShadow: isCurrent ? `0 0 16px ${stage.glow}` : undefined,
-                  }}
                 >
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-
-                  {/* Pulsing indicator ring on current stage */}
-                  {isCurrent && (
-                    <motion.span
-                      animate={{
-                        scale: [1, 1.4, 1],
-                        opacity: [0.8, 0, 0.8],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                      className="absolute inset-0 rounded-full border-2 border-primary pointer-events-none"
-                    />
-                  )}
-                </motion.div>
+                  <Icon className="w-4 h-4" strokeWidth={1.75} />
+                </div>
 
                 {/* Node Title */}
                 <span
-                  className={`mt-2 text-[11px] font-medium tracking-tight ${
+                  className={`mt-1.5 text-[11px] font-medium tracking-tight ${
                     isCurrent
-                      ? 'text-foreground font-bold'
+                      ? 'text-text font-semibold'
                       : isCompleted
-                      ? 'text-emerald-400 font-medium'
-                      : 'text-muted-foreground'
+                      ? 'text-text-secondary'
+                      : 'text-text-muted'
                   }`}
                 >
                   {stage.label}
                 </span>
 
                 {/* Subtitle / Status indicator */}
-                <span className="text-[9px] font-mono uppercase text-muted-foreground/70">
-                  {isCompleted ? '✓ Done' : isCurrent ? '● Active' : 'Waiting'}
+                <span className="text-[9px] font-mono text-text-muted">
+                  {isCompleted ? 'Done' : isCurrent ? 'Active' : 'Pending'}
                 </span>
 
-                {/* Hover Tooltip Description (only when not in compact mode) */}
+                {/* Hover Tooltip Description */}
                 {!compact && (
-                  <div className="absolute -bottom-8 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity bg-popover/90 text-popover-foreground text-[10px] px-2 py-0.5 rounded shadow-md whitespace-nowrap z-20 border border-border">
+                  <div className="absolute -bottom-7 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity bg-surface text-text text-[10px] px-2 py-0.5 rounded-[4px] shadow-[var(--shadow-pop)] whitespace-nowrap z-20 border border-border">
                     {stage.description}
                   </div>
                 )}
               </div>
 
-              {/* Connecting Line between Nodes */}
+              {/* Connecting Hairline between Nodes */}
               {idx < STAGES.length - 1 && (
-                <div className="flex-1 h-0.5 mx-1.5 sm:mx-2 min-w-[20px] bg-border/40 relative overflow-hidden rounded-full">
-                  {/* Glowing Animated Progress Bar */}
+                <div className="flex-1 h-[1px] mx-2 min-w-[16px] bg-border relative">
                   {idx < currentIndex && (
-                    <motion.div
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.5, ease: 'easeOut', delay: idx * 0.1 }}
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-primary origin-left shadow-[0_0_8px_rgba(52,211,153,0.6)]"
-                    />
-                  )}
-
-                  {/* Flow Pulse for Current Active Transition */}
-                  {idx === currentIndex - 1 && (
-                    <motion.div
-                      animate={{
-                        x: ['-100%', '100%'],
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
-                      className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent"
-                    />
+                    <div className="absolute inset-0 bg-accent" />
                   )}
                 </div>
               )}

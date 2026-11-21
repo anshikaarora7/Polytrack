@@ -343,7 +343,7 @@ export default function Studio3DViewport({
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden select-none bg-gradient-to-b from-[#0b0f19] via-[#090d16] to-[#04060b] border border-border/50 shadow-2xl ${className}`}
+      className={`relative rounded-[12px] overflow-hidden select-none bg-surface-2 border border-border shadow-[var(--shadow-pop)] ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -352,32 +352,28 @@ export default function Studio3DViewport({
 
       {/* Top Studio Overlay Badge */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2 pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/60 text-[10px] font-mono font-medium text-foreground/90 shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[8px] bg-surface/90 border border-border text-[10px] font-mono font-medium text-text shadow-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-success" />
           <span>{titleBadge}</span>
         </div>
-        <div className="px-2 py-1 rounded-full bg-background/60 backdrop-blur-md border border-border/40 text-[9px] font-mono text-muted-foreground hidden sm:block">
-          {fps} FPS • 60Hz
+        <div className="px-2 py-0.5 rounded-[8px] bg-surface/90 border border-border text-[9px] font-mono text-text-muted hidden sm:block">
+          {fps} FPS
         </div>
       </div>
 
       {/* Interactive Controls Overlay */}
-      <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 bg-background/80 backdrop-blur-md border border-border/50 p-1 rounded-lg text-[10px] font-mono text-muted-foreground shadow-lg">
+      <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 bg-surface border border-border p-1 rounded-[8px] text-[10px] font-mono text-text-muted shadow-xs">
         <button
           type="button"
           onClick={() => setIsRotating(!isRotating)}
-          className={`px-2 py-0.5 rounded transition-colors ${isRotating ? 'bg-primary/20 text-primary font-medium' : 'hover:bg-accent text-muted-foreground'}`}
+          className={`px-2 py-0.5 rounded-[6px] transition-colors ${isRotating ? 'bg-accent-tint text-accent font-medium' : 'hover:bg-surface-2 text-text-muted'}`}
           title="Toggle Turntable Rotation"
         >
           {isRotating ? 'Spin: ON' : 'Spin: OFF'}
         </button>
-        <div className="w-[1px] h-3 bg-border/60" />
-        <span className="px-1.5 hidden sm:inline text-[9px] text-muted-foreground/80">Drag to Orbit • Scroll to Zoom</span>
+        <div className="w-[1px] h-3 bg-border" />
+        <span className="px-1.5 hidden sm:inline text-[9px] text-text-muted">Drag to Orbit • Scroll to Zoom</span>
       </div>
-
-      {/* Ambient Radial Rim Glow in corners */}
-      <div className="absolute -top-16 -left-16 w-36 h-36 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
     </div>
   );
 }
