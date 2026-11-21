@@ -1,0 +1,137 @@
+### PolyTrack API Tests
+### Install REST Client extension in VS Code (by Humao)
+### Then click "Send Request" above each request
+
+### ─────────────────────────────────────────────────────────
+### STEP 1 — Login (run this first, copy the token below)
+### ─────────────────────────────────────────────────────────
+
+# @name login
+POST http://localhost:5030/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@polytrack.com",
+  "password": "Admin@123456"
+}
+
+### ─────────────────────────────────────────────────────────
+### PASTE YOUR TOKEN FROM ABOVE RESPONSE HERE
+### Replace the token value below with your actual token
+### ─────────────────────────────────────────────────────────
+
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4gVXNlciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwidXNlcklkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzgxMTgwMjAzLCJpc3MiOiJQb2x5VHJhY2tBUEkiLCJhdWQiOiJQb2x5VHJhY2tDbGllbnRzIn0.FLWKskD9I7id4j4OV6JLqP9MXRZ2UT-K-qaG2MGEAVc
+
+### ─────────────────────────────────────────────────────────
+### TEST 1 — Create a project
+### Expected: 201 Created with project id
+### ─────────────────────────────────────────────────────────
+
+# @name createProject
+POST http://localhost:5030/api/projects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Medieval Environment Pack",
+  "description": "Full medieval castle environment with props",
+  "projectCode": "PROJ-001",
+  "projectType": "environment",
+  "status": "active",
+  "priority": "high",
+  "startDate": "2024-01-15",
+  "endDate": "2024-03-15",
+  "budgetAmount": 5000,
+  "currency": "INR"
+}
+
+### ─────────────────────────────────────────────────────────
+### PASTE PROJECT ID FROM ABOVE RESPONSE HERE
+### ─────────────────────────────────────────────────────────
+
+@projectId = PASTE_PROJECT_ID_HERE
+
+### ─────────────────────────────────────────────────────────
+### TEST 2 — Get all projects
+### Expected: 200 OK with list containing your project
+### ─────────────────────────────────────────────────────────
+
+GET http://localhost:5030/api/projects
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### TEST 2b — Get all projects with filters
+### Expected: 200 OK filtered list
+### ─────────────────────────────────────────────────────────
+
+GET http://localhost:5030/api/projects?status=active
+Authorization: Bearer {{token}}
+
+###
+
+GET http://localhost:5030/api/projects?search=medieval
+Authorization: Bearer {{token}}
+
+###
+
+GET http://localhost:5030/api/projects?priority=high
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### TEST 3 — Get single project
+### Expected: 200 OK with full project details
+### ─────────────────────────────────────────────────────────
+
+GET http://localhost:5030/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### TEST 4 — Update project
+### Expected: 200 OK
+### ─────────────────────────────────────────────────────────
+
+PUT http://localhost:5030/api/projects/{{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "planning",
+  "completionPercent": 10
+}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### TEST 5 — Get project stats
+### Expected: 200 OK with all zeros (no tasks/assets yet)
+### ─────────────────────────────────────────────────────────
+
+GET http://localhost:5030/api/projects/{{projectId}}/stats
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### TEST 6 — Delete (soft) project
+### Expected: 200 OK - sets status to cancelled
+### ─────────────────────────────────────────────────────────
+
+DELETE http://localhost:5030/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────────────
+### BONUS — Verify delete worked (status should be cancelled)
+### ─────────────────────────────────────────────────────────
+
+GET http://localhost:5030/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###

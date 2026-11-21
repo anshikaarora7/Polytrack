@@ -1,0 +1,178 @@
+### PolyTrack — Tasks API Tests
+### Run login first, paste token and IDs below
+
+# @name login
+POST http://localhost:5030/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@polytrack.com",
+  "password": "Admin@123456"
+}
+
+###
+
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4gVXNlciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwidXNlcklkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzgxMjUzMjM2LCJpc3MiOiJQb2x5VHJhY2tBUEkiLCJhdWQiOiJQb2x5VHJhY2tDbGllbnRzIn0.zyCVG7nBZjLmXi97H1J76kse0XKCb9G_gPuI8sMVuwg
+@projectId = 1c058d09-21a2-4312-b882-e60e713ad6db
+@taskId = 38a49d06-3b3e-4c37-b356-8df373b12c23
+### ─────────────────────────────────────────────────
+### TEST 1 — Create a task
+### Expected: 201 Created with task id
+### ─────────────────────────────────────────────────
+
+# @name createTask
+POST http://localhost:5030/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Model the castle gate",
+  "description": "Create a detailed 3D model of the medieval castle gate",
+  "projectId": "{{projectId}}",
+  "priority": "high",
+  "storyPoints": 5,
+  "estimatedHours": 8,
+  "dueDate": "2024-02-01"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 2 — Get all tasks for a project
+### Expected: 200 OK with list
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 3 — Get single task
+### Expected: 200 OK with full details
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 4 — Get Kanban board for project
+### Expected: 200 OK with New/InProgress/Review/Done columns
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks/kanban?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 5 — Move task (Kanban drag & drop)
+### Expected: 200 OK, status changes to InProgress
+### ─────────────────────────────────────────────────
+
+PATCH http://localhost:5030/api/tasks/{{taskId}}/move
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "InProgress"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 6 — Add a comment
+### Expected: 200 OK with comment id
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/tasks/{{taskId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "body": "Starting work on the gate model, will share progress by EOD"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 7 — Add comment with status change
+### Expected: 200 OK, task status changes to Review
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/tasks/{{taskId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "body": "Gate model is complete, submitting for review",
+  "statusChangeTo": "Review"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 8 — Get comments
+### Expected: 200 OK with both comments
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks/{{taskId}}/comments
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 9 — Log time
+### Expected: 200 OK
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/tasks/{{taskId}}/time
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "date": "2024-01-20",
+  "hours": 4.5,
+  "notes": "Worked on base mesh and edge loops"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 10 — Get time entries
+### Expected: 200 OK with logged hours
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks/{{taskId}}/time
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 11 — Update task (full update)
+### Expected: 200 OK
+### ─────────────────────────────────────────────────
+
+PUT http://localhost:5030/api/tasks/{{taskId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Model the castle gate — updated",
+  "priority": "critical",
+  "storyPoints": 8
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 12 — Filter tasks by status
+### Expected: 200 OK with only tasks in Review
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/tasks?projectId={{projectId}}&status=Review
+Authorization: Bearer {{token}}
+
+###

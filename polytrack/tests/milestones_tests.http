@@ -1,0 +1,148 @@
+### PolyTrack — Milestones API Tests
+
+# @name login
+POST http://localhost:5030/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@polytrack.com",
+  "password": "Admin@123456"
+}
+
+###
+
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4gVXNlciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwidXNlcklkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzgxMjU1ODMyLCJpc3MiOiJQb2x5VHJhY2tBUEkiLCJhdWQiOiJQb2x5VHJhY2tDbGllbnRzIn0.X2691Dgmrv2AMjKvwj_CTpQxet6uIgOw_fUUA4Dnpfk
+@projectId = 1c058d09-21a2-4312-b882-e60e713ad6db
+@milestoneId = 47d1c600-1b30-428e-af44-21a49ca1e478
+
+### ─────────────────────────────────────────────────
+### TEST 1 — Create milestone 1
+### Expected: 201 Created
+### ─────────────────────────────────────────────────
+
+# @name createMilestone
+POST http://localhost:5030/api/milestones
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "projectId": "{{projectId}}",
+  "name": "Concept",
+  "description": "Initial concept and reference gathering",
+  "sortOrder": 1,
+  "startDate": "2024-01-15",
+  "endDate": "2024-01-22"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 2 — Create milestone 2
+### Expected: 201 Created
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/milestones
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "projectId": "{{projectId}}",
+  "name": "Blockout",
+  "description": "Rough blockout of all major shapes",
+  "sortOrder": 2,
+  "startDate": "2024-01-23",
+  "endDate": "2024-02-05"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 3 — Get all milestones for project
+### Expected: 200 OK — list ordered by sortOrder
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/milestones?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 4 — Get single milestone
+### Expected: 200 OK with task stats
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/milestones/{{milestoneId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 5 — Update milestone status
+### Expected: 200 OK
+### ─────────────────────────────────────────────────
+
+PUT http://localhost:5030/api/milestones/{{milestoneId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "InProgress"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 6 — Reorder milestones
+### Expected: 200 OK
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/milestones/reorder
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+[
+  { "id": "{{milestoneId}}", "sortOrder": 2 }
+]
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 7 — Get tasks under milestone
+### Expected: 200 OK — list of tasks
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/milestones/{{milestoneId}}/tasks
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 8 — Complete milestone (auto-completes tasks)
+### Expected: 200 OK, all tasks set to Done
+### ─────────────────────────────────────────────────
+
+PUT http://localhost:5030/api/milestones/{{milestoneId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "Completed"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 9 — Client approves milestone
+### Expected: 200 OK, status → Completed, PM notified
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/milestones/{{milestoneId}}/client-review
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "approved": true,
+  "notes": "Looks great, approved to proceed to next stage"
+}
+
+###

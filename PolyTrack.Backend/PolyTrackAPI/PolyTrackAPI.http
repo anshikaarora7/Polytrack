@@ -1,0 +1,91 @@
+@PolyTrackAPI_HostAddress = http://localhost:5030
+@adminEmail = admin@polytrack.com
+@adminPassword = Admin@123456
+
+# ═══════════════════════════════════════════════════════════
+# 1. LOGIN - Get JWT Token
+# ═══════════════════════════════════════════════════════════
+POST {{PolyTrackAPI_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJlbWFpbCI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJuYW1lIjoiQWRtaW4gVXNlciIsInJvbGUiOiJAdmin","iat":1718084402,"exp":1718170802,"iss":"PolyTrackAPI","aud":"PolyTrackAPI"}
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 2. CREATE PROJECT
+# ═══════════════════════════════════════════════════════════
+POST {{PolyTrackAPI_HostAddress}}/api/projects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Test Project - E2E",
+  "description": "End-to-end test project",
+  "projectCode": "TP-001",
+  "status": "draft",
+  "priority": "high",
+  "projectType": "ProductDesign",
+  "startDate": "2026-06-11T00:00:00Z",
+  "endDate": "2026-12-31T00:00:00Z",
+  "budgetAmount": 50000,
+  "currency": "INR"
+}
+
+@projectId = 
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 3. GET ALL PROJECTS
+# ═══════════════════════════════════════════════════════════
+GET {{PolyTrackAPI_HostAddress}}/api/projects
+Authorization: Bearer {{token}}
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 4. GET SINGLE PROJECT (by ID)
+# ═══════════════════════════════════════════════════════════
+GET {{PolyTrackAPI_HostAddress}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 5. UPDATE PROJECT
+# ═══════════════════════════════════════════════════════════
+PUT {{PolyTrackAPI_HostAddress}}/api/projects/{{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Test Project - E2E UPDATED",
+  "description": "Updated description",
+  "completionPercent": 25,
+  "priority": "normal"
+}
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 6. GET PROJECT STATS
+# ═══════════════════════════════════════════════════════════
+GET {{PolyTrackAPI_HostAddress}}/api/projects/{{projectId}}/stats
+Authorization: Bearer {{token}}
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# 7. DELETE PROJECT (sets status to Cancelled)
+# Returns: 200 OK
+# ═══════════════════════════════════════════════════════════
+DELETE {{PolyTrackAPI_HostAddress}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+###

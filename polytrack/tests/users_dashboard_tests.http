@@ -1,0 +1,175 @@
+### PolyTrack — Users + Dashboard API Tests
+
+# @name login
+POST http://localhost:5030/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@polytrack.com",
+  "password": "Admin@123456"
+}
+
+###
+
+@token     = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4gVXNlciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwidXNlcklkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzgxMzQyMjU1LCJpc3MiOiJQb2x5VHJhY2tBUEkiLCJhdWQiOiJQb2x5VHJhY2tDbGllbnRzIn0.eq8PPvHDa088kBUWtrX9dESbeblmJWlG2GulLe2LVjU
+@userId    = 550e8400-e29b-41d4-a716-446655440000
+@projectId = 1c058d09-21a2-4312-b882-e60e713ad6db
+
+### ════════════════════════════════════════════════
+###  USERS TESTS
+### ════════════════════════════════════════════════
+
+### TEST 1 — Get all users
+### Expected: 200 OK with list
+GET http://localhost:5030/api/users
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 2 — Get my own profile
+### Expected: 200 OK with stats
+GET http://localhost:5030/api/users/me
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 3 — Create a new artist user
+### Expected: 201 Created
+# @name createUser
+POST http://localhost:5030/api/users
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Ananya Artist",
+  "email": "ananya@polytrack.com",
+  "password": "Artist@12345",
+  "role": "artist",
+  "timezone": "Asia/Kolkata"
+}
+
+###
+
+### TEST 4 — Update own profile
+### Expected: 200 OK
+PUT http://localhost:5030/api/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Admin User Updated",
+  "timezone": "Asia/Kolkata"
+}
+
+###
+
+### TEST 5 — Change password
+### Expected: 200 OK
+POST http://localhost:5030/api/users/change-password
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "currentPassword": "Admin@123456",
+  "newPassword": "Admin@123456"
+}
+
+###
+
+### TEST 6 — Update user role
+### Expected: 200 OK
+PATCH http://localhost:5030/api/users/{{userId}}/role
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "role": "admin"
+}
+
+###
+
+### TEST 7 — Get team workload
+### Expected: 200 OK with per-artist stats
+GET http://localhost:5030/api/users/workload
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 8 — Get workload filtered by project
+### Expected: 200 OK with project team only
+GET http://localhost:5030/api/users/workload?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 9 — Get notifications
+### Expected: 200 OK
+GET http://localhost:5030/api/users/{{userId}}/notifications
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 10 — Mark all notifications read
+### Expected: 200 OK
+POST http://localhost:5030/api/users/{{userId}}/notifications/read-all
+Authorization: Bearer {{token}}
+
+###
+
+### ════════════════════════════════════════════════
+###  DASHBOARD TESTS
+### ════════════════════════════════════════════════
+
+### TEST 11 — Dashboard stats
+### Expected: 200 OK with all counts
+GET http://localhost:5030/api/dashboard/stats
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 12 — Activity feed
+### Expected: 200 OK with recent activity
+GET http://localhost:5030/api/dashboard/activity
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 13 — Activity feed filtered by project
+GET http://localhost:5030/api/dashboard/activity?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 14 — Projects progress
+### Expected: 200 OK with active projects + completion %
+GET http://localhost:5030/api/dashboard/projects-progress
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 15 — Upcoming deadlines (next 7 days)
+### Expected: 200 OK with tasks + milestones
+GET http://localhost:5030/api/dashboard/upcoming-deadlines?days=7
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 16 — Recent assets
+### Expected: 200 OK with last 8 assets
+GET http://localhost:5030/api/dashboard/recent-assets
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 17 — Timesheet grid (this week)
+### Expected: 200 OK with daily hours grid
+GET http://localhost:5030/api/dashboard/timesheets
+Authorization: Bearer {{token}}
+
+###
+
+### TEST 18 — Timesheet for specific user
+GET http://localhost:5030/api/dashboard/timesheets?userId={{userId}}
+Authorization: Bearer {{token}}
+
+###

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PolyTrackAPI.Core/PolyTrackAPI.Core.csproj" />
+  <Project Path="PolyTrackAPI.Infrastructure/PolyTrackAPI.Infrastructure.csproj" />
+  <Project Path="PolyTrackAPI/PolyTrackAPI.csproj" />
+</Solution>

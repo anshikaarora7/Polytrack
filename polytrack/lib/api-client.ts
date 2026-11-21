@@ -1,0 +1,579 @@
+import axios, { AxiosInstance } from 'axios';
+import {
+  AuthResponse,
+  LoginCredentials,
+  DashboardStats,
+  Activity,
+  ProjectProgress,
+  Deadline,
+} from './types';
+
+// Normalize API base URL: ensure no trailing slash, ensure /api suffix
+export const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) {
+    return 'http://localhost:5030/api';
+  }
+  const clean = envUrl.trim().replace(/\/+$/, '');
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+};
+
+// Root server URL without /api (for display, health checks, or root downloads)
+export const getApiServerUrl = (): string => {
+  return getApiBaseUrl().replace(/\/api$/, '');
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+class ApiClient {
+  private client: AxiosInstance;
+  private token: string | null = null;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Load token from localStorage if available
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('accessToken');
+      if (this.token) {
+        this.setAuthToken(this.token);
+      }
+    }
+
+    // Request interceptor — attach token
+    this.client.interceptors.request.use(
+      (config) => {
+        if (this.token) {
+          config.headers.Authorization = `Bearer ${this.token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor — handle 401 with automatic refresh token rotation
+    let isRefreshing = false;
+    let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: any) => void }> = [];
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/')) {
+          if (isRefreshing) {
+            return new Promise((resolve, reject) => {
+              failedQueue.push({
+                resolve: (token: string) => {
+                  originalRequest.headers.Authorization = `Bearer ${token}`;
+                  resolve(this.client(originalRequest));
+                },
+                reject: (err: any) => reject(err),
+              });
+            });
+          }
+
+          originalRequest._retry = true;
+          isRefreshing = true;
+
+          const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+          if (refreshToken) {
+            try {
+              const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+              const { accessToken, refreshToken: newRefresh } = res.data;
+              this.setAuthToken(accessToken);
+              if (typeof window !== 'undefined' && newRefresh) {
+                localStorage.setItem('refreshToken', newRefresh);
+              }
+              failedQueue.forEach((prom) => prom.resolve(accessToken));
+              failedQueue = [];
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              return this.client(originalRequest);
+            } catch (refreshErr) {
+              failedQueue.forEach((prom) => prom.reject(refreshErr));
+              failedQueue = [];
+              this.clearAuth();
+              if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+              }
+              return Promise.reject(refreshErr);
+            } finally {
+              isRefreshing = false;
+            }
+          } else {
+            this.clearAuth();
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  setAuthToken(token: string) {
+    this.token = token;
+    this.client.defaults.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessToken', token);
+    }
+  }
+
+  clearAuth() {
+    this.token = null;
+    delete this.client.defaults.headers.Authorization;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+    }
+  }
+
+  getToken() {
+    return this.token;
+  }
+
+  isAuthenticated() {
+    return !!this.token;
+  }
+
+  // ── Auth ──────────────────────────────────────────────────
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>('/auth/login', credentials);
+    return response.data;
+  }
+
+  async logout(): Promise<void> {
+    const refreshToken = typeof window !== 'undefined'
+      ? localStorage.getItem('refreshToken')
+      : null;
+    try {
+      if (refreshToken) {
+        await this.client.post('/auth/logout', refreshToken, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } finally {
+      this.clearAuth();
+    }
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────
+  async getDashboardStats(): Promise<DashboardStats> {
+    const response = await this.client.get<DashboardStats>('/dashboard/stats');
+    return response.data;
+  }
+
+  async getDashboardActivity(projectId?: string, limit = 20): Promise<Activity[]> {
+    const response = await this.client.get<Activity[]>('/dashboard/activity', {
+      params: { projectId, limit },
+    });
+    return response.data; // plain array
+  }
+
+  async getProjectsProgress(): Promise<ProjectProgress[]> {
+    const response = await this.client.get<ProjectProgress[]>('/dashboard/projects-progress');
+    return response.data; // plain array
+  }
+
+  async getUpcomingDeadlines(days = 7): Promise<Deadline[]> {
+    const response = await this.client.get<Deadline[]>('/dashboard/upcoming-deadlines', {
+      params: { days },
+    });
+    return response.data; // plain array
+  }
+
+  async getRecentAssets(limit = 8) {
+    const response = await this.client.get('/dashboard/recent-assets', {
+      params: { limit },
+    });
+    return response.data; // plain array
+  }
+
+  async getTimesheets(userId?: string, week?: string) {
+    const response = await this.client.get('/dashboard/timesheets', {
+      params: { userId, week },
+    });
+    return response.data;
+  }
+
+  // ── Projects ──────────────────────────────────────────────
+  async getProjects(filters?: {
+    status?: string;
+    priority?: string;
+    projectType?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const response = await this.client.get('/projects', { params: filters });
+    return response.data;
+  }
+
+  async getProjectById(id: string) {
+    const response = await this.client.get(`/projects/${id}`);
+    return response.data;
+  }
+
+  async createProject(data: any) {
+    const response = await this.client.post('/projects', data);
+    return response.data;
+  }
+
+  async updateProject(id: string, data: any) {
+    const response = await this.client.put(`/projects/${id}`, data);
+    return response.data;
+  }
+
+  async deleteProject(id: string) {
+    const response = await this.client.delete(`/projects/${id}`);
+    return response.data;
+  }
+
+  async getProjectStats(id: string) {
+    const response = await this.client.get(`/projects/${id}/stats`);
+    return response.data;
+  }
+
+  async getProjectMembers(id: string) {
+    const response = await this.client.get(`/projects/${id}/members`);
+    return response.data;
+  }
+
+  async addProjectMember(id: string, userId: string, roleInProject?: string) {
+    const response = await this.client.post(`/projects/${id}/members`, {
+      userId,
+      roleInProject,
+    });
+    return response.data;
+  }
+
+  async removeProjectMember(id: string, userId: string) {
+    const response = await this.client.delete(`/projects/${id}/members/${userId}`);
+    return response.data;
+  }
+
+  // ── Tasks ─────────────────────────────────────────────────
+  async getTasks(filters?: {
+    projectId?: string;
+    milestoneId?: string;
+    status?: string;
+    priority?: string;
+    assignedTo?: string;
+    overdue?: boolean;
+  }) {
+    const response = await this.client.get('/tasks', { params: filters });
+    return response.data;
+  }
+
+  async getTaskById(id: string) {
+    const response = await this.client.get(`/tasks/${id}`);
+    return response.data;
+  }
+
+  async getKanbanTasks(projectId: string) {
+    const response = await this.client.get('/tasks/kanban', { params: { projectId } });
+    return response.data; // { new, inProgress, review, done }
+  }
+
+  async createTask(data: any) {
+    const response = await this.client.post('/tasks', data);
+    return response.data;
+  }
+
+  async updateTask(id: string, data: any) {
+    const response = await this.client.put(`/tasks/${id}`, data);
+    return response.data;
+  }
+
+  async moveTask(taskId: string, status: string) {
+    const response = await this.client.patch(`/tasks/${taskId}/move`, { status });
+    return response.data;
+  }
+
+  async getTaskComments(taskId: string) {
+    const response = await this.client.get(`/tasks/${taskId}/comments`);
+    return response.data;
+  }
+
+  async addTaskComment(taskId: string, body: string, statusChangeTo?: string) {
+    const response = await this.client.post(`/tasks/${taskId}/comments`, {
+      body,
+      statusChangeTo,
+    });
+    return response.data;
+  }
+
+  async logTime(taskId: string, date: string, hours: number, notes?: string) {
+    const response = await this.client.post(`/tasks/${taskId}/time`, {
+      date,
+      hours,
+      notes,
+    });
+    return response.data;
+  }
+
+  async getTaskAttachments(taskId: string) {
+    const response = await this.client.get(`/tasks/${taskId}/attachments`);
+    return response.data;
+  }
+
+  async uploadTaskAttachment(taskId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.client.post(`/tasks/${taskId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async deleteTaskAttachment(taskId: string, attachmentId: string) {
+    const response = await this.client.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
+    return response.data;
+  }
+
+  // ── Milestones ────────────────────────────────────────────
+  async getMilestones(projectId: string) {
+    const response = await this.client.get('/milestones', { params: { projectId } });
+    return response.data; // plain array
+  }
+
+  async getMilestoneById(id: string) {
+    const response = await this.client.get(`/milestones/${id}`);
+    return response.data;
+  }
+
+  async createMilestone(data: any) {
+    const response = await this.client.post('/milestones', data);
+    return response.data;
+  }
+
+  async updateMilestone(id: string, data: any) {
+    const response = await this.client.put(`/milestones/${id}`, data);
+    return response.data;
+  }
+
+  async deleteMilestone(id: string) {
+    const response = await this.client.delete(`/milestones/${id}`);
+    return response.data;
+  }
+
+  async reorderMilestones(items: Array<{ id: string; sortOrder: number }>) {
+    const response = await this.client.post('/milestones/reorder', items);
+    return response.data;
+  }
+
+  async reviewMilestone(id: string, approved: boolean, notes?: string) {
+    const response = await this.client.post(`/milestones/${id}/client-review`, {
+      approved,
+      notes,
+    });
+    return response.data;
+  }
+
+  async getMilestoneTasks(id: string) {
+    const response = await this.client.get(`/milestones/${id}/tasks`);
+    return response.data;
+  }
+
+  // ── Inquiries ─────────────────────────────────────────────
+  async getInquiries(params?: { status?: string; search?: string; page?: number; pageSize?: number }) {
+    const response = await this.client.get('/inquiries', { params });
+    return response.data;
+  }
+
+  async getInquiryById(id: string) {
+    const response = await this.client.get(`/inquiries/${id}`);
+    return response.data;
+  }
+
+  async createInquiry(data: any) {
+    const response = await this.client.post('/inquiries', data);
+    return response.data;
+  }
+
+  async updateInquiryStatus(id: string, status: string) {
+    const response = await this.client.patch(`/inquiries/${id}/status`, { status });
+    return response.data;
+  }
+
+  async convertInquiry(id: string, data: { projectName?: string; projectTypeId?: string; budget?: number; projectManagerId?: string }) {
+    const response = await this.client.post(`/inquiries/${id}/convert`, data);
+    return response.data;
+  }
+
+  async uploadInquiryAttachment(id: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.client.post(`/inquiries/${id}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  // ── Clients ───────────────────────────────────────────────
+  async getClients(params?: { search?: string; page?: number; pageSize?: number }) {
+    const response = await this.client.get('/clients', { params });
+    return response.data;
+  }
+
+  async getClientById(id: string) {
+    const response = await this.client.get(`/clients/${id}`);
+    return response.data;
+  }
+
+  async getCurrentClientProfile() {
+    const response = await this.client.get('/clients/me');
+    return response.data;
+  }
+
+  async createClient(data: any) {
+    const response = await this.client.post('/clients', data);
+    return response.data;
+  }
+
+  async updateClient(id: string, data: any) {
+    const response = await this.client.put(`/clients/${id}`, data);
+    return response.data;
+  }
+
+  // ── Assets ────────────────────────────────────────────────
+  async searchAssets(filters?: {
+    query?: string;
+    projectId?: string;
+    category?: string;
+    status?: string;
+    tag?: string;
+    approvedOnly?: boolean;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const response = await this.client.get('/assets/search', { params: filters });
+    return response.data;
+  }
+
+  async getAssetById(id: string) {
+    const response = await this.client.get(`/assets/${id}`);
+    return response.data;
+  }
+
+  async createAsset(data: any) {
+    const response = await this.client.post('/assets', data);
+    return response.data;
+  }
+
+  async uploadAssetVersion(
+    assetId: string,
+    file: File,
+    notes?: string | { notes?: string; polygonCount?: number; materialCount?: number }
+  ) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (typeof notes === 'string') {
+      formData.append('Notes', notes);
+    } else if (notes && typeof notes === 'object') {
+      if (notes.notes) formData.append('Notes', notes.notes);
+      if (notes.polygonCount) formData.append('PolygonCount', String(notes.polygonCount));
+      if (notes.materialCount) formData.append('MaterialCount', String(notes.materialCount));
+    }
+    const response = await this.client.post(`/assets/${assetId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async submitAssetForReview(assetId: string) {
+    const response = await this.client.post(`/assets/${assetId}/submit`);
+    return response.data;
+  }
+
+  async submitAsset(assetId: string) {
+    return this.submitAssetForReview(assetId);
+  }
+
+  async reviewAsset(
+    assetId: string,
+    optionsOrApproved: boolean | { approved: boolean; notes?: string },
+    optionalNotes?: string
+  ) {
+    let approved = true;
+    let notes: string | undefined = optionalNotes;
+
+    if (typeof optionsOrApproved === 'boolean') {
+      approved = optionsOrApproved;
+    } else if (optionsOrApproved && typeof optionsOrApproved === 'object') {
+      approved = optionsOrApproved.approved;
+      notes = optionsOrApproved.notes;
+    }
+
+    const response = await this.client.post(`/assets/${assetId}/review`, {
+      approved,
+      notes,
+    });
+    return response.data;
+  }
+
+  async getAssetComments(assetId: string) {
+    const response = await this.client.get(`/assets/${assetId}/comments`);
+    return response.data;
+  }
+
+  async addAssetComment(assetId: string, body: string, statusChangeTo?: string) {
+    const response = await this.client.post(`/assets/${assetId}/comments`, {
+      body,
+      statusChangeTo,
+    });
+    return response.data;
+  }
+
+  // ── Users ─────────────────────────────────────────────────
+  async getUsers(filters?: { role?: string; search?: string; isActive?: boolean }) {
+    const response = await this.client.get('/users', { params: filters });
+    return response.data;
+  }
+
+  async getCurrentUser() {
+    const response = await this.client.get('/users/me');
+    return response.data;
+  }
+
+  async getUserById(id: string) {
+    const response = await this.client.get(`/users/${id}`);
+    return response.data;
+  }
+
+  async getTeamWorkload(projectId?: string) {
+    const response = await this.client.get('/users/workload', { params: { projectId } });
+    return response.data; // plain array
+  }
+
+  async getNotifications(userId: string, unreadOnly = false) {
+    const response = await this.client.get(`/users/${userId}/notifications`, {
+      params: { unreadOnly },
+    });
+    return response.data;
+  }
+
+  // ── URL Helpers ────────────────────────────────────────────
+  getBaseUrl(): string {
+    return getApiBaseUrl();
+  }
+
+  getServerUrl(): string {
+    return getApiServerUrl();
+  }
+
+  getAssetDownloadUrl(assetId: string, versionId: string): string {
+    return `${this.getBaseUrl()}/assets/${assetId}/download/${versionId}`;
+  }
+
+  getAttachmentDownloadUrl(taskId: string, attachmentId: string): string {
+    return `${this.getBaseUrl()}/tasks/${taskId}/attachments/${attachmentId}/download`;
+  }
+}
+
+export const apiClient = new ApiClient();

@@ -1,0 +1,51 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# .NET build/output
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# .NET local tooling
+.dotnet/
+.dotnet-appdata/
+.dotnet-home/
+
+# ASP.NET local data
+**/.aspnet/
+**/aspnet-data-protection-keys/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage output
+TestResults/
+coverage/
+
+# Local ASP.NET configuration / secrets
+Polytrackmanagement/PolyTrackAPI/appsettings.json
+Polytrackmanagement/PolyTrackAPI/appsettings.Development.json
+Polytrackmanagement/PolyTrackAPI/appsettings.Local.json
+
+# Local NuGet cache
+.nuget/
+
+# ASP.NET local data-protection keys
+**/.aspnet-data-protection-keys/

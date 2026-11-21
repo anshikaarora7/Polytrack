@@ -1,0 +1,205 @@
+### PolyTrack — Assets API Tests
+
+# @name login
+POST http://localhost:5030/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@polytrack.com",
+  "password": "Admin@123456"
+}
+
+###
+
+@token     = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHBvbHl0cmFjay5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4gVXNlciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwidXNlcklkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzgxMjY0NTk3LCJpc3MiOiJQb2x5VHJhY2tBUEkiLCJhdWQiOiJQb2x5VHJhY2tDbGllbnRzIn0.f8DVItTOQlASrgUWUq9BMV-TdUq6TiLy_ReG5kDqTaw
+@projectId = 1c058d09-21a2-4312-b882-e60e713ad6db
+@assetId   = 05ca6576-0421-44cf-bbdf-7c55e05f3f6d
+@versionId = d7933408-9a76-4d78-9c74-1453d6832807
+### ─────────────────────────────────────────────────
+### TEST 1 — Create an asset record
+### Expected: 201 Created with asset id
+### ─────────────────────────────────────────────────
+
+# @name createAsset
+POST http://localhost:5030/api/assets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "projectId": "{{projectId}}",
+  "name": "Castle Gate",
+  "description": "Main entrance gate for the medieval castle",
+  "category": "Environment",
+  "tags": ["medieval", "gate", "stone", "architecture"]
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 2 — Search assets
+### Expected: 200 OK with list
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/assets/search?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 2b — Search with filters
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/assets/search?projectId={{projectId}}&category=Environment
+Authorization: Bearer {{token}}
+
+###
+
+GET http://localhost:5030/api/assets/search?tag=medieval
+Authorization: Bearer {{token}}
+
+###
+
+GET http://localhost:5030/api/assets/search?query=castle
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 3 — Get single asset
+### Expected: 200 OK with full details
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/assets/{{assetId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 4 — Upload a version (multipart form)
+### Expected: 200 OK with versionId
+### ─────────────────────────────────────────────────
+### NOTE: use a real file — create a test.fbx file on disk
+### or replace with any file you have
+
+POST http://localhost:5030/api/assets/{{assetId}}/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="file"; filename="castle_gate_v1.fbx"
+Content-Type: application/octet-stream
+
+< ./test_files/castle_gate_v1.fbx
+------Boundary
+Content-Disposition: form-data; name="Notes"
+
+Initial blockout mesh
+------Boundary
+Content-Disposition: form-data; name="PolygonCount"
+
+12500
+------Boundary--
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 5 — Submit asset for review
+### Expected: 200 OK, status → Submitted
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/assets/{{assetId}}/submit
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 6 — Review asset (approve)
+### Expected: 200 OK, status → Approved
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/assets/{{assetId}}/review
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "approved": true,
+  "notes": "Looks great, clean topology. Approved."
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 7 — Add a comment
+### Expected: 200 OK with comment id
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/assets/{{assetId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "body": "Edge flow on the arch needs cleanup before final approval"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 8 — Add comment with status change (reject)
+### Expected: 200 OK, status → Rejected
+### ─────────────────────────────────────────────────
+
+POST http://localhost:5030/api/assets/{{assetId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "body": "Rejecting — needs UV unwrap before resubmission",
+  "statusChangeTo": "Rejected"
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 9 — Get comments
+### Expected: 200 OK with both comments
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/assets/{{assetId}}/comments
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 10 — Update asset tags
+### Expected: 200 OK
+### ─────────────────────────────────────────────────
+
+PUT http://localhost:5030/api/assets/{{assetId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "tags": ["medieval", "gate", "stone", "architecture", "hero-asset"]
+}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 11 — Download a version
+### Expected: file download
+### ─────────────────────────────────────────────────
+
+GET http://localhost:5030/api/assets/{{assetId}}/download/{{versionId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ─────────────────────────────────────────────────
+### TEST 12 — Archive (soft delete) asset
+### Expected: 200 OK, status → Archived
+### ─────────────────────────────────────────────────
+
+DELETE http://localhost:5030/api/assets/{{assetId}}
+Authorization: Bearer {{token}}
+
+###
