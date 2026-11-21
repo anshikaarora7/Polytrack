@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PolyTrack — Precision 3D Studio Production Tracking</title>
+<meta name="description" content="Production tracking system for 3D animation and game studios. Unify Blender workflows, asset versions, review threads, and Kanban pipelines in one place.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-subtle: #f4f4f5;
+  --border: #e7e7ea;
+  --border-subtle: #f0f0f3;
+  --text: #111113;
+  --text-muted: #5b5b66;
+  --text-faint: #8b8b97;
+  --accent: #5e6ad2;
+  --accent-hover: #4f5bc4;
+  --accent-tint: #eef0fb;
+  --accent-border: #d4d8f8;
+  --success: #1f9d6b;
+  --success-tint: #eaf6f0;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --shadow-pop: 0 1px 2px rgba(16, 16, 20, 0.06);
+  --shadow-card: 0 4px 12px rgba(16, 16, 20, 0.03), 0 1px 2px rgba(16, 16, 20, 0.04);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1011;
+    --surface: #17181a;
+    --surface-subtle: #1f2023;
+    --border: #26272b;
+    --border-subtle: #1c1d20;
+    --text: #ececee;
+    --text-muted: #888992;
+    --text-faint: #5b5b66;
+    --accent: #7b86e8;
+    --accent-hover: #929df0;
+    --accent-tint: #1c1e30;
+    --accent-border: #35395c;
+    --success: #34d399;
+    --success-tint: #13271f;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.45);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1011;
+  --surface: #17181a;
+  --surface-subtle: #1f2023;
+  --border: #26272b;
+  --border-subtle: #1c1d20;
+  --text: #ececee;
+  --text-muted: #888992;
+  --text-faint: #5b5b66;
+  --accent: #7b86e8;
+  --accent-hover: #929df0;
+  --accent-tint: #1c1e30;
+  --accent-border: #35395c;
+  --success: #34d399;
+  --success-tint: #13271f;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="light"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-subtle: #f4f4f5;
+  --border: #e7e7ea;
+  --border-subtle: #f0f0f3;
+  --text: #111113;
+  --text-muted: #5b5b66;
+  --text-faint: #8b8b97;
+  --accent: #5e6ad2;
+  --accent-hover: #4f5bc4;
+  --accent-tint: #eef0fb;
+  --accent-border: #d4d8f8;
+  --success: #1f9d6b;
+  --success-tint: #eaf6f0;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --shadow-pop: 0 1px 2px rgba(16, 16, 20, 0.06);
+  --shadow-card: 0 4px 12px rgba(16, 16, 20, 0.03), 0 1px 2px rgba(16, 16, 20, 0.04);
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+}
+main {
+  overflow-x: clip;
+  width: 100%;
+  position: relative;
+}
+
+/* Scroll Progress Bar */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2.5px;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(var(--page, 0));
+  transform-origin: 0 50%;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Fixed Header Nav */
+.header-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  z-index: 90;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 700;
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.brand-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-secondary:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border);
+}
+.theme-toggle-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.theme-toggle-btn:hover { color: var(--text); background: var(--surface-subtle); }
+
+/* Typography & Layout */
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+h1 { font-size: clamp(2.4rem, 5.5vw, 4.4rem); line-height: 1.08; }
+h2 { font-size: clamp(1.8rem, 3.5vw, 2.75rem); line-height: 1.15; }
+h3 { font-size: clamp(1.15rem, 1.8vw, 1.4rem); line-height: 1.25; }
+p { margin: 0; color: var(--text-muted); }
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+}
+.section-badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Reveal utility: visible by default, progressive enhancement on .js */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.js .reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* SECTION 1: HERO */
+.hero-section {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 3rem;
+  padding: clamp(6rem, 12vh, 8rem) clamp(1.5rem, 6vw, 6rem) 4rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  position: relative;
+}
+.hero-copy {
+  display: flex;
+  flex-col;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.hero-copy p {
+  font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+  line-height: 1.55;
+  max-width: 54ch;
+}
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.hero-tags {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  flex-wrap: wrap;
+}
+.hero-tags span { display: inline-flex; align-items: center; gap: 6px; }
+.hero-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hero-badge-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-pop);
+}
+.hero-badge-overlay .pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+.hero-cue {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-family: var(--mono);
+  margin-top: -1rem;
+  animation: floatCue 2s ease-in-out infinite;
+}
+@keyframes floatCue {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+/* SECTION 2: THE PROBLEM */
+.problem-section {
+  padding: clamp(5rem, 12vh, 8rem) clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+.problem-header {
+  max-width: 680px;
+  margin-bottom: 3.5rem;
+}
+.problem-header p {
+  font-size: 16px;
+  margin-top: 0.75rem;
+}
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.problem-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.problem-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.problem-num span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.problem-card h3 {
+  margin-bottom: 0.75rem;
+  font-size: 18px;
+}
+.problem-card p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.problem-quote {
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  border-left: 2px solid var(--danger);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* SECTION 3: PINNED PIPELINE STORY */
+.pipeline-story-section {
+  position: relative;
+  height: 380vh;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.pipeline-sticky-box {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: 0 clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+.pipeline-viewport-pane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  aspect-ratio: 1;
+  max-width: 480px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.pipeline-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pipeline-hud {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  box-shadow: var(--shadow-pop);
+}
+.pipeline-hud-val {
+  color: var(--accent);
+  font-weight: 600;
+}
+.pipeline-steps-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.pipeline-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.pipeline-pill {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text-faint);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  transition: all 0.25s ease;
+}
+.pipeline-pill.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pipeline-steps-stack {
+  position: relative;
+  min-height: 220px;
+}
+.pipeline-step-item {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+.pipeline-step-item.on {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.pipeline-step-item h3 {
+  font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+}
+.pipeline-step-item p {
+  font-size: 15px;
+  max-width: 50ch;
+  line-height: 1.6;
+}
+.pipeline-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.meta-chip {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+.meta-chip-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-faint);
+  display: block;
+  margin-bottom: 2px;
+}
+.meta-chip-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* SECTION 4: HORIZONTAL TRACK */
+.features-section {
+  position: relative;
+  height: 320vh;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.features-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.features-top-bar {
+  padding: 0 clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.features-row {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0 clamp(1.5rem, 6vw, 6rem);
+  transform: translateX(calc(var(--p, 0) * var(--shift, 0) * -1px));
+  will-change: transform;
+}
+.feature-card {
+  flex: 0 0 clamp(320px, 32vw, 420px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  min-height: 400px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.2s ease;
+}
+.feature-card:hover {
+  border-color: var(--accent);
+}
+.feature-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  margin-bottom: 1.25rem;
+}
+.feature-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.feature-card p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.feature-visual-preview {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* SECTION 5: STATS */
+.stats-section {
+  padding: clamp(5rem, 12vh, 8rem) clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+.stats-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 3.5rem;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.stat-num {
+  font-family: var(--display);
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+.stat-subtext {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+}
+
+/* SECTION 6: ROLES */
+.roles-section {
+  padding: clamp(5rem, 12vh, 8rem) clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+.roles-header {
+  max-width: 640px;
+  margin-bottom: 3.5rem;
+}
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+.role-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem 1.25rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+}
+.role-card h3 {
+  font-size: 16px;
+  margin: 0.5rem 0 0.25rem;
+}
+.role-desc {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.role-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.role-highlights li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.role-highlights li svg {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+/* SECTION 7: CTA */
+.cta-section {
+  padding: clamp(5rem, 12vh, 8rem) clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+.cta-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+.cta-content {
+  max-width: 680px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+.cta-code-snippet {
+  margin-top: 1rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.cta-code-snippet code {
+  overflow-x: auto;
+  white-space: nowrap;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  max-width: calc(100vw - 120px);
+}
+.cta-copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.cta-copy-btn:hover { color: var(--accent); }
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2.5rem clamp(1.5rem, 6vw, 6rem);
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-faint);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.footer-links a:hover { color: var(--text); }
+
+/* Responsive Adjustments down to 390px */
+@media (max-width: 1024px) {
+  .hero-section {
+    grid-template-columns: 1fr;
+    text-align: left;
+    padding-top: 6rem;
+  }
+  .hero-stage {
+    max-width: 380px;
+  }
+  .problem-grid {
+    grid-template-columns: 1fr;
+  }
+  .pipeline-sticky-box {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding-top: 4rem;
+  }
+  .pipeline-viewport-pane {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .roles-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .roles-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .hero-stage { max-width: 320px; }
+  .feature-card { min-height: 360px; }
+  footer { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js .reveal { opacity: 1; transform: none; transition: none; }
+  .hero-cue { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<!-- Header Navigation -->
+<header class="header-nav">
+  <a href="#" class="brand" aria-label="PolyTrack Home">
+    <div class="brand-mark">P</div>
+    <span>PolyTrack</span>
+  </a>
+  <nav>
+    <ul class="nav-links">
+      <li><a href="#problem">The Problem</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#stats">Metrics</a></li>
+      <li><a href="#roles">Roles</a></li>
+    </ul>
+  </nav>
+  <div class="nav-actions">
+    <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle light and dark theme">
+      <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg id="themeIconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+    <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+      <span>GitHub</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="7" y1="17" x2="17" y2="7"></line>
+        <polyline points="7 7 17 7 17 17"></polyline>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<main>
+  <!-- 1. HERO SECTION -->
+  <section class="hero-section" id="hero">
+    <div class="hero-copy">
+      <div class="section-badge reveal">
+        <span class="dot"></span>
+        <span>Studio Production Engine</span>
+      </div>
+      <h1 class="reveal">Every asset.<br>Every stage.<br>One place.</h1>
+      <p class="reveal">
+        PolyTrack eliminates spreadsheet chaos and scattered chat uploads. A precision production tracking system built for 3D animation, game studios, and high-velocity asset pipelines with native Blender sync.
+      </p>
+      <div class="hero-actions reveal">
+        <a href="#pipeline" class="btn btn-primary">
+          <span>Explore Pipeline</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </a>
+        <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+          <span>View Source Code</span>
+        </a>
+      </div>
+      <div class="hero-tags reveal">
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Direct Blender Add-on
+        </span>
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Subversion / Gitless Storage
+        </span>
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          REST API Monolith
+        </span>
+      </div>
+    </div>
+
+    <div class="hero-stage reveal" aria-label="Interactive 3D low-poly wireframe viewport">
+      <div class="hero-badge-overlay">
+        <span class="pulse-dot"></span>
+        <span>viewport_hero.blend • 60 FPS</span>
+      </div>
+      <canvas id="heroCanvas" class="hero-canvas"></canvas>
+    </div>
+
+    <div class="hero-cue" aria-hidden="true">
+      <span>Scroll to explore</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </div>
+  </section>
+
+  <!-- 2. THE PROBLEM -->
+  <section class="problem-section" id="problem">
+    <div class="problem-header reveal">
+      <div class="section-badge">
+        <span class="dot"></span>
+        <span>The Problem</span>
+      </div>
+      <h2>Production happens fast.<br>Spreadsheets can&rsquo;t keep up.</h2>
+      <p>
+        When deadlines loom, 3D teams lose critical hours searching for missing meshes, deciphering vague revision notes, and wondering which version the art director signed off on.
+      </p>
+    </div>
+
+    <div class="problem-grid">
+      <div class="problem-card reveal">
+        <div>
+          <div class="problem-num"><span></span> 01 / VERSION DRIFT</div>
+          <h3>Lost files &amp; naming chaos</h3>
+          <p>
+            Asset iterations scatter across local drives and private chat threads. Nobody knows whether to texture <code>v2_final.blend</code> or <code>v3_clean_APPROVED.blend</code>.
+          </p>
+        </div>
+        <div class="problem-quote">
+          &ldquo;Which blend file has the non-destructive modifiers baked?&rdquo;
+        </div>
+      </div>
+
+      <div class="problem-card reveal">
+        <div>
+          <div class="problem-num"><span></span> 02 / BLIND HANDOFFS</div>
+          <h3>Unclear stage dependencies</h3>
+          <p>
+            Riggers start building skeleton hierarchies on geometry with unapproved edge-loops, while lookdev artists light models that fail polycount budgets.
+          </p>
+        </div>
+        <div class="problem-quote">
+          &ldquo;Rigging spent three days skinning a model that failed QA.&rdquo;
+        </div>
+      </div>
+
+      <div class="problem-card reveal">
+        <div>
+          <div class="problem-num"><span></span> 03 / FRACTURED REVIEWS</div>
+          <h3>Endless, scattered threads</h3>
+          <p>
+            Frame-accurate art feedback is buried across emails, video calls, and unindexed Slack messages. Notes get missed, forcing redundant revision cycles.
+          </p>
+        </div>
+        <div class="problem-quote">
+          &ldquo;The client asked to change the silhouette five revisions ago.&rdquo;
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. PINNED STORY (STICKY PIPELINE) -->
+  <section class="pipeline-story-section" id="pipeline" data-scrub>
+    <div class="pipeline-sticky-box">
+      <!-- 3D Pipeline Visual on the Left -->
+      <div class="pipeline-viewport-pane" aria-label="Dynamic 3D model progressing through pipeline stages">
+        <canvas id="pipelineCanvas" class="pipeline-canvas"></canvas>
+        <div class="pipeline-hud">
+          <span>Active Asset: <strong class="pipeline-hud-val" id="hudAsset">mech_chassis.blend</strong></span>
+          <span id="hudTopology">Polys: 24,500</span>
+        </div>
+      </div>
+
+      <!-- Pipeline Steps Content on the Right -->
+      <div class="pipeline-steps-pane">
+        <div class="section-badge">
+          <span class="dot"></span>
+          <span>Pinned Story / Step-by-Step</span>
+        </div>
+
+        <div class="pipeline-nav-bar" id="pipelinePills" aria-label="Pipeline Stages">
+          <span class="pipeline-pill active">Concept</span>
+          <span class="pipeline-pill">Model</span>
+          <span class="pipeline-pill">Texture</span>
+          <span class="pipeline-pill">Rig</span>
+          <span class="pipeline-pill">Review</span>
+          <span class="pipeline-pill">Approved</span>
+        </div>
+
+        <div class="pipeline-steps-stack">
+          <!-- Step 1: Concept -->
+          <div class="pipeline-step-item on">
+            <h3>01. Concept &amp; Blockout</h3>
+            <p>
+              Establish volume proportions, polycount boundaries, and art direction briefs. Reference imagery is bound directly to the production ticket before 3D artists start geometry.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Target Poly Budget</span>
+                <span class="meta-chip-val">Under 30k Triangles</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">Primary Format</span>
+                <span class="meta-chip-val">SubD Bounding Box</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Model -->
+          <div class="pipeline-step-item">
+            <h3>02. Topology &amp; Clean Meshing</h3>
+            <p>
+              High-poly sculpts and low-poly retopology. All assets are verified for manifold geometry, consistent normals, and clean quad edge-loops ready for deformation.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Mesh Verification</span>
+                <span class="meta-chip-val">Manifold / Zero N-Gons</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">LOD Generations</span>
+                <span class="meta-chip-val">LOD0, LOD1, Collision</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Texture -->
+          <div class="pipeline-step-item">
+            <h3>03. UDIM &amp; PBR Shading</h3>
+            <p>
+              Bake normal maps, ambient occlusion, and roughness. Shaders and textures are versioned in studio storage, keeping texture paths consistent across artist workstations.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Resolution Spec</span>
+                <span class="meta-chip-val">4K Metal / Roughness</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">Color Space</span>
+                <span class="meta-chip-val">ACEScg / Linear sRGB</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Rig -->
+          <div class="pipeline-step-item">
+            <h3>04. Kinematics &amp; Skeletal Rig</h3>
+            <p>
+              Establish FK/IK bone hierarchies, custom deformation controllers, and vertex weight painting. Rigs are automatically validated against game-engine export targets.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Bone Hierarchy</span>
+                <span class="meta-chip-val">Humanoid / Mech IK</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">Weight Bounds</span>
+                <span class="meta-chip-val">Max 4 Influences / Vert</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5: Review -->
+          <div class="pipeline-step-item">
+            <h3>05. Interactive 3D Turntable QA</h3>
+            <p>
+              Lead artists and supervisors inspect the model in real time. Rotate, zoom, toggle wireframes, and review vertex counts directly in the browser with no DCC installation needed.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Inspection Engine</span>
+                <span class="meta-chip-val">Hardware WebGL PBR</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">Annotation Notes</span>
+                <span class="meta-chip-val">Timestamped Feedback</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 6: Approved -->
+          <div class="pipeline-step-item">
+            <h3>06. Approved &amp; Production Locked</h3>
+            <p>
+              Once approved, the asset version is cryptographically locked and marked production-ready. Downstream lighting, layout, and VFX departments receive instant automated notifications.
+            </p>
+            <div class="pipeline-meta-row">
+              <div class="meta-chip">
+                <span class="meta-chip-label">Pipeline Status</span>
+                <span class="meta-chip-val" style="color:var(--success);">Production Locked</span>
+              </div>
+              <div class="meta-chip">
+                <span class="meta-chip-label">Automated Export</span>
+                <span class="meta-chip-val">Unreal / Unity / USD</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. HORIZONTAL TRACK (FEATURES) -->
+  <section class="features-section" id="features" data-scrub>
+    <div class="features-sticky">
+      <div class="features-top-bar">
+        <div>
+          <div class="section-badge">
+            <span class="dot"></span>
+            <span>Horizontal Feature Track</span>
+          </div>
+          <h2>Engineered for 3D production.</h2>
+        </div>
+        <p style="font-family:var(--mono); font-size:12px; color:var(--text-faint);">
+          Scroll to browse cards →
+        </p>
+      </div>
+
+      <div class="features-row">
+        <!-- Card 1 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <h3>Projects &amp; Tasks</h3>
+            <p>
+              Manage production milestones, project code schemas, story points, and estimated hours with deadline forecasts.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span>Project: Cyberpunk Alley</span>
+              <span style="color:var(--accent);">Active</span>
+            </div>
+            <div style="height:4px; width:100%; background:var(--border); border-radius:4px; overflow:hidden;">
+              <div style="width:68%; height:100%; background:var(--accent);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+            </div>
+            <h3>Studio Kanban Board</h3>
+            <p>
+              Smooth drag-and-drop task movement through Backlog, In Progress, Review, and Done lanes with priority badges.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; gap:8px;">
+              <span style="padding:2px 6px; background:var(--bg); border:1px solid var(--border); border-radius:4px;">Backlog (4)</span>
+              <span style="padding:2px 6px; background:var(--accent-tint); color:var(--accent); border-radius:4px;">In Progress (2)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            </div>
+            <h3>3D Asset Versioning</h3>
+            <p>
+              Version control for binary 3D files (.blend, .fbx, .obj) with automated polycount tracking and revision notes.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; justify-content:space-between;">
+              <span>chassis_v3.blend</span>
+              <span style="color:var(--success);">V3 (Latest)</span>
+            </div>
+            <div style="font-size:11px; color:var(--text-faint); margin-top:4px;">24,800 polygons • 2 materials</div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            </div>
+            <h3>Frame-Accurate QA</h3>
+            <p>
+              Interactive browser-based 3D turntable viewer with wireframe toggling, orbit controls, and one-click approvals.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
+              <span>Supervisor: &ldquo;Normals clean, approved for Rigging&rdquo;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <h3>Capacity &amp; Timesheets</h3>
+            <p>
+              Real-time weekly timesheets, quota calculations, and team workload charts to catch artist burnouts before crunch.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; justify-content:space-between;">
+              <span>Alex Rivera (Lead)</span>
+              <span>36 / 40 hrs (90%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            </div>
+            <h3>Client RFP Portal</h3>
+            <p>
+              A clean portal where prospective clients submit project inquiries, budgets, and deadlines for instant conversion.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="display:flex; justify-content:space-between;">
+              <span>Apex Interactive Inquiry</span>
+              <span style="color:var(--accent);">Quoted</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+            <h3>Blender Integration</h3>
+            <p>
+              Native Python studio add-on. Artists check out assigned tasks, pull latest versions, and upload increments from Blender.
+            </p>
+          </div>
+          <div class="feature-visual-preview">
+            <div style="font-family:var(--mono); color:var(--accent);">[PolyTrack Sync] Push v4 → OK</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. STATS SECTION -->
+  <section class="stats-section" id="stats">
+    <div class="stats-header reveal">
+      <div class="section-badge">
+        <span class="dot"></span>
+        <span>Studio Benchmarks</span>
+      </div>
+      <h2>Production velocity in numbers.</h2>
+      <p>Typical metrics observed when studios replace scattered spreadsheets with PolyTrack workflows.</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card reveal">
+        <div class="stat-num count-up" data-target="94" data-suffix="%">0%</div>
+        <div class="stat-label">Faster Approval Loops</div>
+        <div class="stat-subtext">supervisor turnaround</div>
+      </div>
+
+      <div class="stat-card reveal">
+        <div class="stat-num count-up" data-target="12850" data-suffix="+">0</div>
+        <div class="stat-label">3D Versions Tracked</div>
+        <div class="stat-subtext">across studio projects</div>
+      </div>
+
+      <div class="stat-card reveal">
+        <div class="stat-num count-up" data-target="3" data-prefix="" data-suffix=".2×">0</div>
+        <div class="stat-label">Reduction in Rework</div>
+        <div class="stat-subtext">geometry and topology</div>
+      </div>
+
+      <div class="stat-card reveal">
+        <div class="stat-num count-up" data-target="0" data-suffix="">0</div>
+        <div class="stat-label">Lost Production Files</div>
+        <div class="stat-subtext">zero file drift incidents</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. ROLES SECTION -->
+  <section class="roles-section" id="roles">
+    <div class="roles-header reveal">
+      <div class="section-badge">
+        <span class="dot"></span>
+        <span>Studio Team Roles</span>
+      </div>
+      <h2>Built for every discipline.</h2>
+      <p>Tailored interfaces ensuring artists, supervisors, and producers see exactly what matters to their workflow.</p>
+    </div>
+
+    <div class="roles-grid">
+      <!-- Role 1 -->
+      <div class="role-card reveal">
+        <div>
+          <span class="role-badge">Admin</span>
+          <h3>Studio Admin</h3>
+          <p class="role-desc">Full governance over workspace settings, security, and storage mounts.</p>
+        </div>
+        <ul class="role-highlights">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            RBAC permissions
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            System telemetry
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Storage quotas
+          </li>
+        </ul>
+      </div>
+
+      <!-- Role 2 -->
+      <div class="role-card reveal">
+        <div>
+          <span class="role-badge">Producer</span>
+          <h3>Project Manager</h3>
+          <p class="role-desc">Tracks milestones, budget burn rates, sprint deadlines, and artist capacity.</p>
+        </div>
+        <ul class="role-highlights">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Milestone Gantt
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Budget burndown
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Team capacity view
+          </li>
+        </ul>
+      </div>
+
+      <!-- Role 3 -->
+      <div class="role-card reveal">
+        <div>
+          <span class="role-badge">Artist</span>
+          <h3>Lead 3D Artist</h3>
+          <p class="role-desc">Focuses on asset creation with zero administrative friction.</p>
+        </div>
+        <ul class="role-highlights">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Personal task queue
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            1-Click Blender sync
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Daily time logging
+          </li>
+        </ul>
+      </div>
+
+      <!-- Role 4 -->
+      <div class="role-card reveal">
+        <div>
+          <span class="role-badge">Supervisor</span>
+          <h3>Art Reviewer / QA</h3>
+          <p class="role-desc">Reviews submitted 3D assets in turntable view and marks decisions.</p>
+        </div>
+        <ul class="role-highlights">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            3D Turntable inspection
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Pass/Reject flow
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Wireframe inspection
+          </li>
+        </ul>
+      </div>
+
+      <!-- Role 5 -->
+      <div class="role-card reveal">
+        <div>
+          <span class="role-badge">External</span>
+          <h3>Studio Client</h3>
+          <p class="role-desc">Protected external portal for milestone approvals and asset handoffs.</p>
+        </div>
+        <ul class="role-highlights">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Inquiry tracking
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Milestone approval
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Final delivery sign-off
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. CALL TO ACTION -->
+  <section class="cta-section" id="cta">
+    <div class="cta-card reveal">
+      <div class="cta-content">
+        <div class="section-badge">
+          <span class="dot"></span>
+          <span>Open Source Core</span>
+        </div>
+        <h2>Bring your pipeline into focus.</h2>
+        <p>
+          Deploy PolyTrack on your studio hardware or cloud server in minutes. Free forever, self-hosted, with zero per-seat licensing fees.
+        </p>
+
+        <div style="display:flex; align-items:center; gap:12px; margin-top:1rem; flex-wrap:wrap; justify-content:center;">
+          <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding:10px 20px; font-size:14px;">
+            <span>Get Started on GitHub</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="17" x2="17" y2="7"></line>
+              <polyline points="7 7 17 7 17 17"></polyline>
+            </svg>
+          </a>
+          <a href="http://localhost:3000/login" class="btn btn-secondary" style="padding:10px 18px; font-size:14px;">
+            <span>Open Studio App</span>
+          </a>
+        </div>
+
+        <div class="cta-code-snippet">
+          <code>git clone https://github.com/anshikaarora7/Polytrack.git</code>
+          <button id="copySnippetBtn" class="cta-copy-btn" aria-label="Copy clone command">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div class="brand-mark" style="width:20px; height:20px; font-size:11px;">P</div>
+    <span>PolyTrack 3D Studio Tracking Engine</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+    <a href="http://localhost:3000/login">Studio App</a>
+    <a href="#hero">Back to Top ↑</a>
+  </div>
+</footer>
+
+<script>
+// Progressive enhancement class
+document.documentElement.classList.add('js');
+
+// 1. Theme Toggle logic
+const themeToggleBtn = document.getElementById('themeToggle');
+const iconSun = document.getElementById('themeIconSun');
+const iconMoon = document.getElementById('themeIconMoon');
+
+function updateThemeUI(isDark) {
+  if (isDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    iconSun.style.display = 'block';
+    iconMoon.style.display = 'none';
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    iconSun.style.display = 'none';
+    iconMoon.style.display = 'block';
+  }
+}
+
+const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+updateThemeUI(userPrefersDark);
+
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || (userPrefersDark ? 'dark' : 'light');
+  const nextDark = currentTheme !== 'dark';
+  updateThemeUI(nextDark);
+});
+
+// 2. IntersectionObserver for standard .reveal items
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((e) => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+// 3. Stats Counter Animation using IntersectionObserver
+const statsObs = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      const target = parseFloat(el.getAttribute('data-target') || '0');
+      const suffix = el.getAttribute('data-suffix') || '';
+      const prefix = el.getAttribute('data-prefix') || '';
+      const duration = 1200;
+      const start = performance.now();
+
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        el.textContent = prefix + target.toLocaleString() + suffix;
+        statsObs.unobserve(el);
+        return;
+      }
+
+      function step(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = target * ease;
+        el.textContent = prefix + (target % 1 === 0 ? Math.floor(current).toLocaleString() : current.toFixed(1)) + suffix;
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = prefix + target.toLocaleString() + suffix;
+        }
+      }
+      requestAnimationFrame(step);
+      statsObs.unobserve(el);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.count-up').forEach((el) => statsObs.observe(el));
+
+// 4. Scroll Scrubbing Handler for [data-scrub] & global page progress
+const scrubs = [...document.querySelectorAll('[data-scrub]')];
+let isTicking = false;
+
+function onScrollUpdate() {
+  const scrollY = window.pageYOffset || window.scrollY || document.documentElement.scrollTop || 0;
+  const vh = window.innerHeight || 800;
+  const doc = document.documentElement;
+  const max = Math.max(1, (document.body.scrollHeight || doc.scrollHeight) - vh);
+  const pageProgress = Math.min(1, Math.max(0, scrollY / max));
+
+  const progressBar = document.querySelector('.scroll-progress');
+  if (progressBar) {
+    progressBar.style.transform = `scaleX(${pageProgress})`;
+  }
+  doc.style.setProperty('--page', pageProgress.toFixed(4));
+
+  scrubs.forEach((s) => {
+    const rect = s.getBoundingClientRect();
+    const total = rect.height - vh;
+    const p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 0;
+    s.style.setProperty('--p', p.toFixed(4));
+
+    // Horizontal track shift
+    const row = s.querySelector('.features-row');
+    if (row) {
+      const shift = Math.max(0, row.scrollWidth - window.innerWidth + 60);
+      s.style.setProperty('--shift', shift);
+      row.style.transform = `translate3d(${(-p * shift).toFixed(1)}px, 0, 0)`;
+    }
+
+    // Pipeline Story steps toggle
+    const steps = s.querySelectorAll('.pipeline-step-item');
+    const pills = s.querySelectorAll('.pipeline-pill');
+    if (steps.length && s.classList.contains('pipeline-story-section')) {
+      const idx = Math.min(steps.length - 1, Math.floor(p * steps.length));
+      steps.forEach((el, k) => el.classList.toggle('on', k === idx));
+      pills.forEach((el, k) => el.classList.toggle('active', k === idx));
+
+      // Update HUD and Canvas State
+      window.pipelineStageIndex = idx;
+      window.pipelineStageProgress = p;
+      const hudTopology = document.getElementById('hudTopology');
+      if (hudTopology) {
+        const polys = ['Target: 30k', 'Polys: 24,500', '4K PBR UDIM', 'Rig: 68 Bones', 'Inspect: 60 FPS', 'Production Locked'];
+        hudTopology.textContent = polys[idx] || 'Verified';
+      }
+    }
+  });
+
+  isTicking = false;
+}
+
+window.addEventListener('scroll', () => {
+  if (!isTicking) {
+    isTicking = true;
+    requestAnimationFrame(onScrollUpdate);
+  }
+}, { passive: true });
+
+window.addEventListener('resize', onScrollUpdate);
+window.addEventListener('DOMContentLoaded', onScrollUpdate);
+window.addEventListener('load', onScrollUpdate);
+onScrollUpdate();
+
+// 5. Hero 3D Low-Poly Wireframe Canvas (Pure JS/Canvas projection, Zero external libraries)
+(function initHeroCanvas() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let dpr = window.devicePixelRatio || 1;
+  let width = 0, height = 0;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    width = rect.width;
+    height = rect.height;
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Icosahedron 3D Geometry
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const vertices = [
+    [-1,  phi, 0], [ 1,  phi, 0], [-1, -phi, 0], [ 1, -phi, 0],
+    [ 0, -1,  phi], [ 0,  1,  phi], [ 0, -1, -phi], [ 0,  1, -phi],
+    [ phi, 0, -1], [ phi, 0,  1], [-phi, 0, -1], [-phi, 0,  1]
+  ].map(v => {
+    const len = Math.hypot(...v);
+    return [v[0]/len, v[1]/len, v[2]/len];
+  });
+
+  const edges = [
+    [0,11],[0,5],[0,1],[0,7],[0,10],
+    [1,5],[1,9],[1,8],[1,7],
+    [2,11],[2,4],[2,3],[2,6],[2,10],
+    [3,9],[3,4],[3,6],[3,8],
+    [4,5],[4,9],[4,11],
+    [5,11],[5,9],
+    [6,7],[6,8],[6,10],
+    [7,8],[7,10],
+    [8,9],
+    [10,11]
+  ];
+
+  let rotX = 0.3;
+  let rotY = 0.4;
+  let targetRotX = 0.3;
+  let targetRotY = 0.4;
+
+  window.addEventListener('mousemove', (e) => {
+    const nx = (e.clientX / window.innerWidth) * 2 - 1;
+    const ny = (e.clientY / window.innerHeight) * 2 - 1;
+    targetRotY = nx * 0.8;
+    targetRotX = -ny * 0.6;
+  }, { passive: true });
+
+  function render(time) {
+    ctx.clearRect(0, 0, width, height);
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReduced) {
+      rotY += (targetRotY + time * 0.0006 - rotY) * 0.05;
+      rotX += (targetRotX + Math.sin(time * 0.001) * 0.2 - rotX) * 0.05;
+    }
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.32;
+    const fov = 3.5;
+
+    // Project vertices
+    const projected = vertices.map(v => {
+      let x = v[0], y = v[1], z = v[2];
+
+      // Rotate X
+      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      const y1 = y * cosX - z * sinX;
+      const z1 = y * sinX + z * cosX;
+
+      // Rotate Y
+      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+      const x2 = x * cosY + z1 * sinY;
+      const z2 = -x * sinY + z1 * cosY;
+
+      const scale = fov / (fov + z2);
+      return {
+        x: cx + x2 * radius * scale,
+        y: cy + y1 * radius * scale,
+        z: z2
+      };
+    });
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const edgeColor = isDark ? 'rgba(123, 134, 232, 0.45)' : 'rgba(94, 106, 210, 0.35)';
+    const nodeColor = isDark ? '#7b86e8' : '#5e6ad2';
+
+    // Draw orbital rings
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radius * 1.35, radius * 0.45, rotY * 0.5, 0, Math.PI * 2);
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radius * 1.5, radius * 0.6, -rotX * 0.7, 0, Math.PI * 2);
+    ctx.strokeStyle = isDark ? 'rgba(123, 134, 232, 0.2)' : 'rgba(94, 106, 210, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw wireframe edges
+    ctx.beginPath();
+    ctx.strokeStyle = edgeColor;
+    ctx.lineWidth = 1.25;
+    edges.forEach(([i, j]) => {
+      ctx.moveTo(projected[i].x, projected[i].y);
+      ctx.lineTo(projected[j].x, projected[j].y);
+    });
+    ctx.stroke();
+
+    // Draw vertex nodes
+    projected.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = nodeColor;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+})();
+
+// 6. Pipeline 3D Stage Morphing Canvas (Progresses with scroll)
+(function initPipelineCanvas() {
+  const canvas = document.getElementById('pipelineCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let width = 0, height = 0;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    width = rect.width;
+    height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Low-poly 3D cube / faceted mesh
+  const cubeVerts = [
+    [-1, -1, -1], [ 1, -1, -1], [ 1,  1, -1], [-1,  1, -1],
+    [-1, -1,  1], [ 1, -1,  1], [ 1,  1,  1], [-1,  1,  1]
+  ];
+  const cubeEdges = [
+    [0,1],[1,2],[2,3],[3,0],
+    [4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+  ];
+
+  let rotAngle = 0;
+
+  function render(time) {
+    ctx.clearRect(0, 0, width, height);
+
+    const stageIdx = window.pipelineStageIndex || 0;
+    const stageP = window.pipelineStageProgress || 0;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReduced) {
+      rotAngle = stageP * Math.PI * 2 + time * 0.0003;
+    }
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.28;
+    const fov = 3.2;
+
+    const projected = cubeVerts.map(v => {
+      const x = v[0], y = v[1], z = v[2];
+      const cosY = Math.cos(rotAngle), sinY = Math.sin(rotAngle);
+      const x2 = x * cosY + z * sinY;
+      const z2 = -x * sinY + z * cosY;
+
+      const cosX = Math.cos(0.4), sinX = Math.sin(0.4);
+      const y3 = y * cosX - z2 * sinX;
+      const z3 = y * sinX + z2 * cosX;
+
+      const scale = fov / (fov + z3);
+      return {
+        x: cx + x2 * radius * scale,
+        y: cy + y3 * radius * scale,
+        z: z3
+      };
+    });
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Grid Floor
+    ctx.beginPath();
+    const floorY = cy + radius * 1.1;
+    for (let g = -4; g <= 4; g++) {
+      ctx.moveTo(cx + g * 30, floorY);
+      ctx.lineTo(cx + g * 45, floorY + 40);
+    }
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Stage-specific visual morphing
+    if (stageIdx === 0) {
+      // Concept: Points and bounding box wireframe
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)';
+      cubeEdges.forEach(([i, j]) => {
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[j].x, projected[j].y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      projected.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#5e6ad2';
+        ctx.fill();
+      });
+    } else if (stageIdx === 1) {
+      // Model: Solid clean wireframe quad geometry
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? '#7b86e8' : '#5e6ad2';
+      ctx.lineWidth = 2;
+      cubeEdges.forEach(([i, j]) => {
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[j].x, projected[j].y);
+      });
+      ctx.stroke();
+
+      // Subdivision diagonal lines
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? 'rgba(123, 134, 232, 0.3)' : 'rgba(94, 106, 210, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(projected[0].x, projected[0].y); ctx.lineTo(projected[2].x, projected[2].y);
+      ctx.moveTo(projected[4].x, projected[4].y); ctx.lineTo(projected[6].x, projected[6].y);
+      ctx.stroke();
+    } else if (stageIdx === 2) {
+      // Texture: Shaded facet fill
+      ctx.beginPath();
+      ctx.moveTo(projected[4].x, projected[4].y);
+      ctx.lineTo(projected[5].x, projected[5].y);
+      ctx.lineTo(projected[6].x, projected[6].y);
+      ctx.lineTo(projected[7].x, projected[7].y);
+      ctx.closePath();
+      ctx.fillStyle = isDark ? 'rgba(123, 134, 232, 0.35)' : 'rgba(94, 106, 210, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = isDark ? '#7b86e8' : '#5e6ad2';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Front Face
+      ctx.beginPath();
+      ctx.moveTo(projected[0].x, projected[0].y);
+      ctx.lineTo(projected[1].x, projected[1].y);
+      ctx.lineTo(projected[5].x, projected[5].y);
+      ctx.lineTo(projected[4].x, projected[4].y);
+      ctx.closePath();
+      ctx.fillStyle = isDark ? 'rgba(123, 134, 232, 0.2)' : 'rgba(94, 106, 210, 0.12)';
+      ctx.fill();
+      ctx.stroke();
+    } else if (stageIdx === 3) {
+      // Rig: Skeletal bone overlay with joint nodes
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)';
+      ctx.lineWidth = 1;
+      cubeEdges.forEach(([i, j]) => {
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[j].x, projected[j].y);
+      });
+      ctx.stroke();
+
+      // Spine & IK Joint Nodes
+      ctx.beginPath();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 3;
+      ctx.moveTo(cx, cy + radius * 0.8);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy - radius * 0.8);
+      ctx.stroke();
+
+      [cy + radius * 0.8, cy, cy - radius * 0.8].forEach(yPos => {
+        ctx.beginPath();
+        ctx.arc(cx, yPos, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    } else if (stageIdx === 4) {
+      // Review: Turntable inspection grid & bounding halo
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius * 1.3, radius * 0.4, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = '#5e6ad2';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = isDark ? '#7b86e8' : '#5e6ad2';
+      ctx.lineWidth = 1.5;
+      cubeEdges.forEach(([i, j]) => {
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[j].x, projected[j].y);
+      });
+      ctx.stroke();
+
+      // Inspection Camera Frustum icon
+      ctx.beginPath();
+      ctx.arc(cx, cy - radius * 1.1, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#1f9d6b';
+      ctx.fill();
+    } else if (stageIdx === 5) {
+      // Approved: Glowing solid with checkmark
+      ctx.beginPath();
+      ctx.moveTo(projected[4].x, projected[4].y);
+      ctx.lineTo(projected[5].x, projected[5].y);
+      ctx.lineTo(projected[6].x, projected[6].y);
+      ctx.lineTo(projected[7].x, projected[7].y);
+      ctx.closePath();
+      ctx.fillStyle = isDark ? 'rgba(52, 211, 153, 0.3)' : 'rgba(31, 157, 107, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = '#1f9d6b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      cubeEdges.forEach(([i, j]) => {
+        ctx.beginPath();
+        ctx.strokeStyle = '#1f9d6b';
+        ctx.lineWidth = 2;
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[j].x, projected[j].y);
+        ctx.stroke();
+      });
+
+      // Verification Shield / Checkmark
+      ctx.beginPath();
+      ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+      ctx.fillStyle = '#1f9d6b';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy);
+      ctx.lineTo(cx - 2, cy + 6);
+      ctx.lineTo(cx + 8, cy - 6);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+})();
+
+// 7. Snippet Copy Button
+const copyBtn = document.getElementById('copySnippetBtn');
+if (copyBtn) {
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText('git clone https://github.com/anshikaarora7/Polytrack.git').then(() => {
+      copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1f9d6b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      setTimeout(() => {
+        copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+      }, 2000);
+    });
+  });
+}
+</script>
+</body>
+</html>

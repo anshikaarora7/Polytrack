@@ -3,6 +3,18 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        destination: '/landing.html',
+      },
+      {
+        source: '/landing',
+        destination: '/landing.html',
+      },
+    ];
+  },
 }
 
 export default nextConfig
