@@ -3,12 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Studio3DViewport from '@/components/studio-3d-viewport';
+
+const LoginHeroBackground3D = dynamic(
+  () => import('@/components/LoginHeroBackground3D'),
+  { ssr: false }
+);
 import {
   Mail,
   Lock,
@@ -149,6 +155,9 @@ export default function LoginForm() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col justify-center px-4 py-8 lg:px-8">
+      {/* 3D Full-Height Animated Canvas Background */}
+      <LoginHeroBackground3D />
+
       {/* Background ambient glow */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />

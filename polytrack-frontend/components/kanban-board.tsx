@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -345,102 +346,116 @@ export default function KanbanBoard() {
                 </div>
 
                 {/* Tasks List */}
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 min-h-[100px]">
                   {column.tasks?.length === 0 ? (
                     <div className="py-8 text-center text-xs text-muted-foreground/60 border border-dashed border-border/40 rounded-lg">
                       Drop tasks here or click below to add
                     </div>
                   ) : (
-                    column.tasks.map((task: any) => {
-                      const pKey = (task.priority || '').toLowerCase();
+                    <AnimatePresence mode="popLayout">
+                      {column.tasks.map((task: any) => {
+                        const pKey = (task.priority || '').toLowerCase();
 
-                      return (
-                        <div
-                          key={task.id}
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', task.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onClick={() => setSelectedTask(task)}
-                          className={`p-3.5 bg-card hover:bg-card/90 border border-border/60 hover:border-border rounded-lg cursor-grab active:cursor-grabbing transition-all shadow-sm ${
-                            priorityColors[pKey] || ''
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <h4 className="font-medium text-foreground text-sm line-clamp-2">
-                              {task.title}
-                            </h4>
-                          </div>
-
-                          {task.milestoneName && (
-                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mb-2 truncate max-w-full">
-                              {task.milestoneName}
-                            </span>
-                          )}
-
-                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                            <div className="flex items-center gap-1.5">
-                              {task.assignedTo ? (
-                                <div
-                                  className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold"
-                                  title={task.assignedTo.name}
-                                >
-                                  {task.assignedTo.name.charAt(0).toUpperCase()}
-                                </div>
-                              ) : (
-                                <span className="text-[10px] text-muted-foreground/60">Unassigned</span>
-                              )}
-                              <span className="truncate max-w-[80px]">
-                                {task.assignedTo?.name || ''}
-                              </span>
+                        return (
+                          <motion.div
+                            layout
+                            layoutId={task.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{
+                              layout: { type: 'spring', stiffness: 350, damping: 28 },
+                              opacity: { duration: 0.2 },
+                            }}
+                            key={task.id}
+                            draggable={true}
+                            onDragStart={(e) => {
+                              const dragEvent = e as unknown as React.DragEvent<HTMLDivElement>;
+                              if (dragEvent.dataTransfer) {
+                                dragEvent.dataTransfer.setData('text/plain', task.id);
+                                dragEvent.dataTransfer.effectAllowed = 'move';
+                              }
+                            }}
+                            onClick={() => setSelectedTask(task)}
+                            className={`p-3.5 bg-card hover:bg-card/90 border border-border/60 hover:border-border rounded-lg cursor-grab active:cursor-grabbing transition-all shadow-sm ${
+                              priorityColors[pKey] || ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h4 className="font-medium text-foreground text-sm line-clamp-2">
+                                {task.title}
+                              </h4>
                             </div>
 
-                            {task.dueDate && (
-                              <span
-                                className={`flex items-center gap-1 text-[11px] ${
-                                  task.isOverdue ? 'text-destructive font-medium' : ''
-                                }`}
-                              >
-                                <Calendar className="w-3 h-3" />
-                                {new Date(task.dueDate).toLocaleDateString()}
+                            {task.milestoneName && (
+                              <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mb-2 truncate max-w-full">
+                                {task.milestoneName}
                               </span>
                             )}
-                          </div>
 
-                          {/* Quick lane transition buttons */}
-                          <div className="flex items-center justify-end gap-1 mt-2.5 pt-2 border-t border-border/20">
-                            {column.id !== 'InProgress' && column.id !== 'Done' && (
-                              <button
-                                onClick={(e) => handleMoveTask(task.id, 'InProgress', e)}
-                                title="Move to In Progress"
-                                className="px-2 py-0.5 text-[10px] rounded bg-muted hover:bg-accent text-foreground transition-colors"
-                              >
-                                → In Progress
-                              </button>
-                            )}
-                            {column.id === 'InProgress' && (
-                              <button
-                                onClick={(e) => handleMoveTask(task.id, 'Review', e)}
-                                title="Move to Review"
-                                className="px-2 py-0.5 text-[10px] rounded bg-muted hover:bg-accent text-foreground transition-colors"
-                              >
-                                → Review
-                              </button>
-                            )}
-                            {column.id === 'Review' && (
-                              <button
-                                onClick={(e) => handleMoveTask(task.id, 'Done', e)}
-                                title="Mark as Done"
-                                className="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                              >
-                                ✓ Done
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
+                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                              <div className="flex items-center gap-1.5">
+                                {task.assignedTo ? (
+                                  <div
+                                    className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold"
+                                    title={task.assignedTo.name}
+                                  >
+                                    {task.assignedTo.name.charAt(0).toUpperCase()}
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground/60">Unassigned</span>
+                                )}
+                                <span className="truncate max-w-[80px]">
+                                  {task.assignedTo?.name || ''}
+                                </span>
+                              </div>
+
+                              {task.dueDate && (
+                                <span
+                                  className={`flex items-center gap-1 text-[11px] ${
+                                    task.isOverdue ? 'text-destructive font-medium' : ''
+                                  }`}
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(task.dueDate).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Quick lane transition buttons */}
+                            <div className="flex items-center justify-end gap-1 mt-2.5 pt-2 border-t border-border/20">
+                              {column.id !== 'InProgress' && column.id !== 'Done' && (
+                                <button
+                                  onClick={(e) => handleMoveTask(task.id, 'InProgress', e)}
+                                  title="Move to In Progress"
+                                  className="px-2 py-0.5 text-[10px] rounded bg-muted hover:bg-accent text-foreground transition-colors"
+                                >
+                                  → In Progress
+                                </button>
+                              )}
+                              {column.id === 'InProgress' && (
+                                <button
+                                  onClick={(e) => handleMoveTask(task.id, 'Review', e)}
+                                  title="Move to Review"
+                                  className="px-2 py-0.5 text-[10px] rounded bg-muted hover:bg-accent text-foreground transition-colors"
+                                >
+                                  → Review
+                                </button>
+                              )}
+                              {column.id === 'Review' && (
+                                <button
+                                  onClick={(e) => handleMoveTask(task.id, 'Done', e)}
+                                  title="Mark as Done"
+                                  className="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                                >
+                                  ✓ Done
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   )}
                 </div>
               </div>

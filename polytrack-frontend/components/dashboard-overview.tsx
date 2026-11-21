@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { apiClient } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AssetTurntableModal from '@/components/asset-turntable-modal';
+import PipelineFlow from '@/components/PipelineFlow';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   FolderOpen,
@@ -27,6 +28,80 @@ import {
   Rotate3d
 } from 'lucide-react';
 import type { DashboardStats, Activity, ProjectProgress, Deadline } from '@/lib/types';
+
+// Animated Count-Up Number using requestAnimationFrame and easeOut
+function CountUpNumber({ value, suffix = '', duration = 1.2 }: { value: number; suffix?: string; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState<number>(0);
+
+  useEffect(() => {
+    let startTime: number | null = null;
+    const startVal = 0;
+    const endVal = value;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
+      const eased = 1 - (1 - progress) * (1 - progress);
+      setDisplayValue(Math.round(startVal + (endVal - startVal) * eased));
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }, [value, duration]);
+
+  return <span>{displayValue.toLocaleString()}{suffix}</span>;
+}
+
+// Animated SVG Progress Ring with Framer Motion strokeDashoffset
+function AnimatedProgressRing({
+  percentage,
+  size = 54,
+  strokeWidth = 4.5,
+  color = '#6366f1'
+}: {
+  percentage: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(Math.max(percentage, 0), 100);
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="rotate-[-90deg]">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          className="text-muted/20"
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.15 }}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-[11px] font-mono font-bold text-foreground">
+        {Math.round(clamped)}%
+      </span>
+    </div>
+  );
+}
 
 export default function DashboardOverview() {
   const [turntableAsset, setTurntableAsset] = useState<any | null>(null);
@@ -67,6 +142,17 @@ export default function DashboardOverview() {
     completion: p.completionPercent ?? 0,
   }));
 
+  // Calculations for progress rings
+  const taskCompletionRate = stats?.totalTasks && stats.totalTasks > 0
+    ? ((stats.completedTasks || 0) / stats.totalTasks) * 100
+    : 0;
+
+  const assetApprovalRate = stats?.totalAssets && stats.totalAssets > 0
+    ? ((stats.approvedAssets || 0) / stats.totalAssets) * 100
+    : 0;
+
+  const hoursTargetRate = Math.min(((stats?.totalHoursThisWeek || 0) / 40) * 100, 100);
+
   const statusColors: Record<string, { bg: string; dot: string; glow: string }> = {
     draft: {
       bg: 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30',
@@ -105,21 +191,24 @@ export default function DashboardOverview() {
         />
       )}
 
-      {/* 1. Stats Grid */}
+      {/* 1. Animated Stats Grid with Count-Ups and Progress Rings */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/40 transition-all">
+        {/* Total Projects Card */}
+        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/40 transition-all flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total Projects</p>
               {statsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <p className="text-3xl font-bold text-foreground">{stats?.totalProjects || 0}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  <CountUpNumber value={stats?.totalProjects || 0} />
+                </p>
               )}
             </div>
             <div className="p-3 bg-primary/10 rounded-xl">
@@ -129,67 +218,81 @@ export default function DashboardOverview() {
           <p className="text-xs text-muted-foreground mt-4">Active projects in studio system</p>
         </Card>
 
-        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-accent/40 transition-all">
-          <div className="flex items-start justify-between">
+        {/* Total Tasks Card with Animated Ring */}
+        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-accent/40 transition-all flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total Tasks</p>
               {statsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <p className="text-3xl font-bold text-foreground">{stats?.totalTasks || 0}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  <CountUpNumber value={stats?.totalTasks || 0} />
+                </p>
               )}
             </div>
-            <div className="p-3 bg-accent/10 rounded-xl">
-              <CheckSquare className="w-6 h-6 text-accent" />
-            </div>
+            <AnimatedProgressRing percentage={taskCompletionRate} color="#38bdf8" />
           </div>
-          <p className="text-xs text-muted-foreground mt-4">Completed: {stats?.completedTasks || 0}</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            Completed: <span className="font-semibold text-foreground">{stats?.completedTasks || 0}</span> tasks
+          </p>
         </Card>
 
-        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-chart-2/40 transition-all">
-          <div className="flex items-start justify-between">
+        {/* Total Assets Card with Animated Ring */}
+        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-chart-2/40 transition-all flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total 3D Assets</p>
               {statsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <p className="text-3xl font-bold text-foreground">{stats?.totalAssets || 0}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  <CountUpNumber value={stats?.totalAssets || 0} />
+                </p>
               )}
             </div>
-            <div className="p-3 bg-chart-2/10 rounded-xl">
-              <ImageIcon className="w-6 h-6 text-chart-2" />
-            </div>
+            <AnimatedProgressRing percentage={assetApprovalRate} color="#10b981" />
           </div>
-          <p className="text-xs text-muted-foreground mt-4">Approved: {stats?.approvedAssets || 0}</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            Approved: <span className="font-semibold text-foreground">{stats?.approvedAssets || 0}</span> assets
+          </p>
         </Card>
 
-        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-green-500/40 transition-all">
-          <div className="flex items-start justify-between">
+        {/* Hours Logged Card with Target Ring */}
+        <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm hover:border-green-500/40 transition-all flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Hours Logged</p>
+              <p className="text-sm text-muted-foreground mb-1">Weekly Hours</p>
               {statsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <p className="text-3xl font-bold text-foreground">
-                  {stats?.totalHoursThisWeek ? `${stats.totalHoursThisWeek}h` : '0h'}
+                  <CountUpNumber value={Math.round(stats?.totalHoursThisWeek || 0)} suffix="h" />
                 </p>
               )}
             </div>
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <Clock className="w-6 h-6 text-green-500" />
-            </div>
+            <AnimatedProgressRing percentage={hoursTargetRate} color="#a855f7" />
           </div>
           <p className="text-xs text-muted-foreground mt-4">
-            This Month: {stats?.totalHoursThisMonth || 0}h
+            This Month: <span className="font-semibold text-foreground">{stats?.totalHoursThisMonth || 0}h</span> logged
           </p>
         </Card>
       </motion.div>
 
-      {/* 2. Charts & Deadlines Grid */}
+      {/* 2. Interactive Pipeline Flow Stage */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
+        transition={{ duration: 0.4, delay: 0.08 }}
+      >
+        <PipelineFlow currentStage="Review" />
+      </motion.div>
+
+      {/* 3. Charts & Deadlines Grid */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15 }}
         className="grid grid-cols-1 lg:grid-cols-3 gap-6"
       >
         {/* Project Progress Chart */}
@@ -256,7 +359,7 @@ export default function DashboardOverview() {
         </Card>
       </motion.div>
 
-      {/* 3. Recent 3D Assets Gallery with Turntable Previews */}
+      {/* 4. Recent 3D Assets Gallery with Turntable Previews */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -340,11 +443,11 @@ export default function DashboardOverview() {
         </Card>
       </motion.div>
 
-      {/* 4. Weekly Timesheet Summary Grid */}
+      {/* 5. Weekly Timesheet Summary Grid */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
+        transition={{ duration: 0.4, delay: 0.25 }}
       >
         <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
           <div className="flex items-center justify-between">

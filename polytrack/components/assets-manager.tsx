@@ -30,7 +30,21 @@ import {
   Tag,
   Rotate3d
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import AssetTurntableModal from '@/components/asset-turntable-modal';
+import PipelineFlow from '@/components/PipelineFlow';
+
+const AssetViewer3D = dynamic(
+  () => import('@/components/AssetViewer3D'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-72 rounded-xl bg-card/60 border border-border/50 flex items-center justify-center font-mono text-xs text-muted-foreground animate-pulse">
+        Initializing Studio 3D Viewport...
+      </div>
+    ),
+  }
+);
 
 export default function AssetsManager() {
   const { user } = useAuthStore();
@@ -593,6 +607,30 @@ export default function AssetsManager() {
                   {assetDetail.description}
                 </p>
               )}
+
+              {/* 3D Production Pipeline Flow Visualization */}
+              <PipelineFlow
+                currentStage={assetDetail?.status || selectedAsset.status}
+                className="mt-4"
+              />
+
+              {/* Interactive 3D Model Viewport */}
+              <div className="mt-4">
+                <AssetViewer3D
+                  url={
+                    assetDetail?.versions?.[0]?.id
+                      ? `${apiClient.getServerUrl()}/api/assets/${selectedAsset.id}/download/${assetDetail.versions[0].id}`
+                      : undefined
+                  }
+                  assetName={assetDetail?.name || selectedAsset.name}
+                  category={assetDetail?.category || selectedAsset.category}
+                  polygonCount={
+                    assetDetail?.versions?.[0]?.polygonCount || selectedAsset?.polygonCount || 24500
+                  }
+                  className="w-full h-72"
+                  autoRotate={true}
+                />
+              </div>
 
               {/* Review & Upload Action Bar */}
               <div className="mt-4 p-3 bg-card/80 border border-border rounded-xl flex flex-wrap items-center justify-between gap-3">
