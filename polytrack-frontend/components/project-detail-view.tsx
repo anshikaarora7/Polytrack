@@ -4,10 +4,11 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
 import { Milestone, ProjectDetail } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ErrorWarningPage, ErrorWarningCard } from '@/components/ui/error-warning';
 import {
   ArrowLeft,
   Calendar,
@@ -53,6 +54,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{ title?: string; message: string; details?: string[] } | null>(null);
 
   // SWR fetches
   const {
@@ -104,6 +106,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
     e.preventDefault();
     if (!memberUserId) return;
     setIsSubmitting(true);
+    setActionError(null);
     try {
       await apiClient.addProjectMember(projectId, memberUserId, memberRole);
       setShowAddMemberModal(false);
@@ -112,7 +115,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
       setStatusMessage('Member successfully added to project');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to add member');
+      setActionError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -120,13 +123,14 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
 
   const handleRemoveMember = async (userId: string) => {
     if (!confirm('Are you sure you want to remove this team member from the project?')) return;
+    setActionError(null);
     try {
       await apiClient.removeProjectMember(projectId, userId);
       mutateProject();
       setStatusMessage('Member removed');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to remove member');
+      setActionError(formatApiError(err));
     }
   };
 
@@ -134,6 +138,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
     e.preventDefault();
     if (!milestoneName) return;
     setIsSubmitting(true);
+    setActionError(null);
     try {
       await apiClient.createMilestone({
         projectId,
@@ -154,7 +159,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
       setStatusMessage('Milestone created!');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create milestone');
+      setActionError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -167,6 +172,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
       )
     )
       return;
+    setActionError(null);
     try {
       await apiClient.updateMilestone(milestoneId, { status: 'Completed' });
       mutateMilestones();
@@ -175,7 +181,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
       setStatusMessage('Milestone and linked tasks marked Completed!');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete milestone');
+      setActionError(formatApiError(err));
     }
   };
 
@@ -183,6 +189,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
     e.preventDefault();
     if (!reviewingMilestone) return;
     setIsSubmitting(true);
+    setActionError(null);
     try {
       await apiClient.reviewMilestone(reviewingMilestone.id, reviewApproved, reviewNotes);
       setReviewingMilestone(null);
@@ -195,7 +202,7 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
       );
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit client review');
+      setActionError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -210,20 +217,55 @@ export default function ProjectDetailView({ projectId }: ProjectDetailViewProps)
   }
 
   if (projectError || !project) {
+    const isForbidden = projectError?.response?.status === 403;
     return (
-      <div className="p-8 text-center space-y-4">
-        <AlertCircle className="w-10 h-10 text-danger mx-auto" strokeWidth={1.75} />
-        <h2 className="text-lg font-semibold text-text">Project Not Found</h2>
-        <p className="text-sm text-text-muted">The requested project could not be found or loaded.</p>
-        <Link href="/dashboard/projects">
-          <Button variant="outline" className="rounded-[8px] text-xs">Back to Projects</Button>
-        </Link>
+      <div className="py-8">
+        <ErrorWarningCard
+          statusCode={projectError?.response?.status || 404}
+          title={isForbidden ? 'Project Access Denied' : 'Project Not Found'}
+          message={
+            projectError
+              ? formatApiError(projectError).message
+              : 'The requested studio project could not be found or has been archived.'
+          }
+          error={projectError}
+          type={isForbidden ? 'forbidden' : 'not-found'}
+          backUrl="/dashboard/projects"
+          backLabel="Back to Projects"
+          onRetry={() => mutateProject()}
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-[8px] text-danger text-xs flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={1.75} />
+            <div>
+              <p className="font-semibold">{actionError.title || 'Action Failed'}</p>
+              <p>{actionError.message}</p>
+              {actionError.details && actionError.details.length > 0 && (
+                <ul className="mt-1 list-disc list-inside space-y-0.5">
+                  {actionError.details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-danger hover:opacity-80 p-0.5 text-sm leading-none"
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Back button & Title */}
       <div className="flex items-center gap-3">
         <Link

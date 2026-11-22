@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
+import { ErrorWarningCard } from '@/components/ui/error-warning';
 import { useAuthStore } from '@/lib/auth-store';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,13 +79,19 @@ export default function AssetsManager() {
   // Review Form
   const [reviewApproved, setReviewApproved] = useState(true);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Projects fetch
   const { data: projectsData } = useSWR('asset-projects', () => apiClient.getProjects());
   const projects = projectsData?.data || [];
 
   // Assets fetch
-  const { data: assetsData, mutate: mutateAssets, isLoading } = useSWR(
+  const {
+    data: assetsData,
+    mutate: mutateAssets,
+    isLoading,
+    error: assetsError,
+  } = useSWR(
     ['assets-search', selectedProjectId, selectedCategory, selectedStatus, searchQuery],
     () =>
       apiClient.searchAssets({
@@ -123,7 +130,7 @@ export default function AssetsManager() {
     e.preventDefault();
     const projId = createForm.projectId || (projects[0]?.id ?? '');
     if (!createForm.name || !projId) {
-      alert('Please fill in asset name and select a project.');
+      setErrorMessage('Please fill in asset name and select a project.');
       return;
     }
 
@@ -154,7 +161,8 @@ export default function AssetsManager() {
       setStatusMessage(`Asset "${createForm.name}" created successfully!`);
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create asset');
+      const parsed = formatApiError(err);
+      setErrorMessage(parsed.message || 'Failed to create asset');
     } finally {
       setIsSubmitting(false);
     }
@@ -163,11 +171,12 @@ export default function AssetsManager() {
   const handleUploadVersion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!versionFile || !selectedAsset) {
-      alert('Please select a 3D file (.blend, .fbx, .obj, .glb)');
+      setErrorMessage('Please select a 3D file (.blend, .fbx, .obj, .glb)');
       return;
     }
 
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await apiClient.uploadAssetVersion(selectedAsset.id, versionFile, {
         notes: versionNotes,
@@ -182,7 +191,8 @@ export default function AssetsManager() {
       setStatusMessage('New version uploaded to studio storage!');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to upload version');
+      const parsed = formatApiError(err);
+      setErrorMessage(parsed.message || 'Failed to upload version');
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +201,7 @@ export default function AssetsManager() {
   const handleSubmitForReview = async () => {
     if (!selectedAsset) return;
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await apiClient.submitAsset(selectedAsset.id);
       mutateAssets();
@@ -198,7 +209,8 @@ export default function AssetsManager() {
       setStatusMessage('Asset submitted for review!');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit asset');
+      const parsed = formatApiError(err);
+      setErrorMessage(parsed.message || 'Failed to submit asset');
     } finally {
       setIsSubmitting(false);
     }
@@ -208,6 +220,7 @@ export default function AssetsManager() {
     e.preventDefault();
     if (!selectedAsset) return;
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await apiClient.reviewAsset(selectedAsset.id, {
         approved: reviewApproved,
@@ -222,7 +235,8 @@ export default function AssetsManager() {
       );
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit review');
+      const parsed = formatApiError(err);
+      setErrorMessage(parsed.message || 'Failed to record review decision');
     } finally {
       setIsSubmitting(false);
     }
@@ -249,7 +263,10 @@ export default function AssetsManager() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       })
-      .catch((err) => alert('Download error: ' + err.message));
+      .catch((err) => {
+        const parsed = formatApiError(err);
+        setErrorMessage(parsed.message || 'Download error');
+      });
   };
 
   return (
@@ -289,6 +306,35 @@ export default function AssetsManager() {
           <CheckCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
           <span>{statusMessage}</span>
         </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3 bg-destructive/10 border border-destructive/25 rounded-[8px] text-destructive text-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-[11px] hover:underline font-mono"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {assetsError && (
+        <ErrorWarningCard
+          type={formatApiError(assetsError).type}
+          statusCode={formatApiError(assetsError).statusCode}
+          title={formatApiError(assetsError).title}
+          message={formatApiError(assetsError).message}
+          error={assetsError}
+          onRetry={() => mutateAssets()}
+          showDashboardLink={false}
+          showBackLink={false}
+        />
       )}
 
       {/* Filter and Search Bar */}

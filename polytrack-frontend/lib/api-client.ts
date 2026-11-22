@@ -98,7 +98,7 @@ class ApiClient {
               failedQueue = [];
               this.clearAuth();
               if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                window.location.href = '/login';
+                window.location.href = '/login?reason=session_expired';
               }
               return Promise.reject(refreshErr);
             } finally {
@@ -107,7 +107,7 @@ class ApiClient {
           } else {
             this.clearAuth();
             if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-              window.location.href = '/login';
+              window.location.href = '/login?reason=session_expired';
             }
           }
         }
@@ -577,3 +577,108 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// ── Standardized API Error Handling ────────────────────────────
+export type ApiErrorType = 'auth' | 'forbidden' | 'not-found' | 'network' | 'server' | 'validation' | 'generic';
+
+export interface FormattedApiError {
+  type: ApiErrorType;
+  title: string;
+  message: string;
+  statusCode?: number;
+  details?: any;
+}
+
+export function formatApiError(error: any): FormattedApiError {
+  if (!error) {
+    return {
+      type: 'generic',
+      title: 'Unexpected Error',
+      message: 'An unknown studio error occurred.',
+    };
+  }
+
+  // Network / Connection errors (server down, CORS, timeout)
+  if (error.code === 'ERR_NETWORK' || !error.response) {
+    return {
+      type: 'network',
+      title: 'Backend Offline / Connection Failed',
+      message: `Unable to reach PolyTrack API at ${getApiServerUrl()}. Please ensure the backend daemon is running and accessible.`,
+      statusCode: 0,
+      details: error.message || error.code,
+    };
+  }
+
+  const status = error.response?.status;
+  const data = error.response?.data;
+
+  // 401 Unauthorized
+  if (status === 401) {
+    return {
+      type: 'auth',
+      title: 'Session Expired or Unauthorized',
+      message: data?.message || 'Your studio session is invalid or has expired. Please sign in again.',
+      statusCode: 401,
+      details: data,
+    };
+  }
+
+  // 403 Forbidden
+  if (status === 403) {
+    return {
+      type: 'forbidden',
+      title: 'Access Denied / Insufficient Role',
+      message: data?.message || 'You do not have the required studio permissions to access this pipeline resource or perform this action.',
+      statusCode: 403,
+      details: data,
+    };
+  }
+
+  // 404 Not Found
+  if (status === 404) {
+    return {
+      type: 'not-found',
+      title: 'Resource Not Found',
+      message: data?.message || 'The requested asset, project, task, or version could not be found.',
+      statusCode: 404,
+      details: data,
+    };
+  }
+
+  // 400 / 422 Validation Error
+  if (status === 400 || status === 422) {
+    let validationMsg = data?.message || 'Invalid request parameters.';
+    if (data?.errors && typeof data.errors === 'object') {
+      const messages = Object.entries(data.errors)
+        .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+        .join('; ');
+      if (messages) validationMsg = messages;
+    }
+    return {
+      type: 'validation',
+      title: 'Validation Error',
+      message: validationMsg,
+      statusCode: status,
+      details: data?.errors || data,
+    };
+  }
+
+  // 500+ Server Error
+  if (status >= 500) {
+    return {
+      type: 'server',
+      title: 'Studio Server Error',
+      message: data?.message || `The backend server encountered an error (HTTP ${status}). Check server logs for details.`,
+      statusCode: status,
+      details: data,
+    };
+  }
+
+  return {
+    type: 'generic',
+    title: 'Request Failed',
+    message: data?.message || error.message || 'An unexpected error occurred.',
+    statusCode: status,
+    details: data,
+  };
+}

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
+import { ErrorWarningCard } from '@/components/ui/error-warning';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,10 +20,11 @@ import {
 } from 'lucide-react';
 
 export default function ProjectsList() {
-  const { data: projectsData, mutate, isLoading } = useSWR('projects', () => apiClient.getProjects());
+  const { data: projectsData, mutate, isLoading, error: projectsError } = useSWR('projects', () => apiClient.getProjects());
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -62,6 +64,7 @@ export default function ProjectsList() {
     e.preventDefault();
     if (!form.name) return;
     setIsSubmitting(true);
+    setModalError(null);
     try {
       await apiClient.createProject({
         name: form.name,
@@ -86,11 +89,14 @@ export default function ProjectsList() {
       });
       mutate();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create project');
+      const parsed = formatApiError(err);
+      setModalError(parsed.message || 'Failed to create project');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const parsedError = projectsError ? formatApiError(projectsError) : null;
 
   return (
     <div className="space-y-6">
@@ -103,13 +109,30 @@ export default function ProjectsList() {
           </p>
         </div>
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+            setModalError(null);
+            setShowCreateModal(true);
+          }}
           className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5 text-sm h-9 px-3.5 shadow-none"
         >
           <Plus className="w-4 h-4" strokeWidth={1.75} />
           <span>New Project</span>
         </Button>
       </div>
+
+      {/* Projects Fetch Error Banner */}
+      {parsedError && (
+        <ErrorWarningCard
+          type={parsedError.type}
+          statusCode={parsedError.statusCode}
+          title={parsedError.title}
+          message={parsedError.message}
+          error={projectsError}
+          onRetry={() => mutate()}
+          showDashboardLink={false}
+          showBackLink={false}
+        />
+      )}
 
       {/* Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -238,6 +261,13 @@ export default function ProjectsList() {
             </div>
 
             <form onSubmit={handleCreateProject} className="space-y-4 mt-4 text-sm">
+              {modalError && (
+                <div className="p-3 bg-danger/10 border border-danger/20 rounded-[8px] flex items-start gap-2 text-xs text-danger text-left">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-text mb-1">

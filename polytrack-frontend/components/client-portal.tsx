@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
 import { ProjectInquiry, ClientProfile } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ErrorWarningCard } from '@/components/ui/error-warning';
 import {
   Inbox,
   Building2,
@@ -65,17 +66,22 @@ export default function ClientPortal() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [portalError, setPortalError] = useState<{ title?: string; message: string; details?: string[] } | null>(null);
 
   // Data fetching
-  const { data: inquiriesData, mutate: mutateInquiries, isLoading: loadingInquiries } = useSWR(
-    'inquiries',
-    () => apiClient.getInquiries()
-  );
+  const {
+    data: inquiriesData,
+    mutate: mutateInquiries,
+    isLoading: loadingInquiries,
+    error: inquiriesError,
+  } = useSWR('inquiries', () => apiClient.getInquiries());
 
-  const { data: clientsData, mutate: mutateClients, isLoading: loadingClients } = useSWR(
-    'clients',
-    () => apiClient.getClients()
-  );
+  const {
+    data: clientsData,
+    mutate: mutateClients,
+    isLoading: loadingClients,
+    error: clientsError,
+  } = useSWR('clients', () => apiClient.getClients());
 
   const inquiries: ProjectInquiry[] = inquiriesData?.data || [];
   const clients: ClientProfile[] = clientsData?.data || [];
@@ -139,7 +145,7 @@ export default function ClientPortal() {
       setActionMessage('Inquiry submitted successfully!');
       setTimeout(() => setActionMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit inquiry');
+      setPortalError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -153,7 +159,7 @@ export default function ClientPortal() {
         setSelectedInquiry({ ...selectedInquiry, status });
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update status');
+      setPortalError(formatApiError(err));
     }
   };
 
@@ -161,6 +167,7 @@ export default function ClientPortal() {
     e.preventDefault();
     if (!convertingInquiry) return;
     setIsSubmitting(true);
+    setPortalError(null);
     try {
       const res = await apiClient.convertInquiry(convertingInquiry.id, {
         projectName: convertForm.projectName || convertingInquiry.projectTitle,
@@ -173,7 +180,7 @@ export default function ClientPortal() {
       setActionMessage(`Inquiry converted! Project created: ${res.projectName || 'Success'}`);
       setTimeout(() => setActionMessage(null), 5000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to convert inquiry');
+      setPortalError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -182,6 +189,7 @@ export default function ClientPortal() {
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setPortalError(null);
     try {
       await apiClient.createClient(clientForm);
       setShowNewClientModal(false);
@@ -196,7 +204,7 @@ export default function ClientPortal() {
       setActionMessage('Client registered successfully!');
       setTimeout(() => setActionMessage(null), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to register client');
+      setPortalError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -244,6 +252,52 @@ export default function ClientPortal() {
           <CheckCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
           <span>{actionMessage}</span>
         </div>
+      )}
+
+      {portalError && (
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-[8px] text-danger text-xs flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2">
+            <XCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={1.75} />
+            <div>
+              <p className="font-semibold">{portalError.title || 'Request Failed'}</p>
+              <p>{portalError.message}</p>
+              {portalError.details && portalError.details.length > 0 && (
+                <ul className="mt-1 list-disc list-inside space-y-0.5">
+                  {portalError.details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setPortalError(null)}
+            className="text-danger hover:opacity-80 p-0.5 text-sm leading-none"
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {inquiriesError && (
+        <ErrorWarningCard
+          error={inquiriesError}
+          type="server"
+          title="Failed to Load Inquiries"
+          message="Could not load client inquiries from the database."
+          onRetry={() => mutateInquiries()}
+        />
+      )}
+
+      {clientsError && (
+        <ErrorWarningCard
+          error={clientsError}
+          type="server"
+          title="Failed to Load Clients"
+          message="Could not load client directory from the database."
+          onRetry={() => mutateClients()}
+        />
       )}
 
       {/* Navigation Tabs */}

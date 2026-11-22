@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ThemeToggle from '@/components/theme-toggle';
@@ -29,7 +29,9 @@ import {
   Box,
   Cpu,
   Zap,
-  RotateCw
+  RotateCw,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 
 const LoginHeroBackground3D = dynamic(
@@ -87,12 +89,43 @@ const DEMO_ROLES = [
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get('reason');
+
   const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('admin@polytrack.com');
   const [password, setPassword] = useState('Admin@123456');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [signingInRole, setSigningInRole] = useState<string | null>(null);
+
+  const getReasonBanner = () => {
+    switch (reason) {
+      case 'session_expired':
+        return {
+          title: 'Session Expired',
+          desc: 'Your studio session timed out or was renewed. Please sign in again to resume your workspace.',
+          type: 'warning' as const,
+        };
+      case 'unauthorized':
+      case 'forbidden':
+        return {
+          title: 'Authentication Required',
+          desc: 'You must be signed in with an authorized account to access that studio pipeline resource.',
+          type: 'warning' as const,
+        };
+      case 'deactivated':
+        return {
+          title: 'Account Deactivated',
+          desc: 'This studio profile has been disabled in the studio directory. Please contact your pipeline administrator.',
+          type: 'danger' as const,
+        };
+      default:
+        return null;
+    }
+  };
+
+  const reasonBanner = getReasonBanner();
 
   const handleQuickLogin = async (roleEmail: string, rolePwd: string, roleName: string) => {
     setEmail(roleEmail);
@@ -105,14 +138,17 @@ export default function LoginForm() {
       await login(roleEmail, rolePwd);
       router.push('/dashboard');
     } catch (err: any) {
-      if (!err.response) {
+      const parsed = formatApiError(err);
+      if (parsed.type === 'network') {
         setLocalError(
-          `Cannot connect to backend API at ${apiClient.getServerUrl()}. Please check network connectivity or ensure the backend service is running.`
+          `Cannot connect to backend API at ${apiClient.getServerUrl()}. Please verify the backend service is running.`
         );
       } else if (err.response?.status === 401) {
         setLocalError('Authentication failed. Default password is: Admin@123456');
+      } else if (err.response?.status === 403) {
+        setLocalError('This studio account has been deactivated or restricted.');
       } else {
-        setLocalError(err.response?.data?.message || 'Login failed. Please try again.');
+        setLocalError(parsed.message || 'Login failed. Please try again.');
       }
     } finally {
       setSigningInRole(null);
@@ -140,7 +176,8 @@ export default function LoginForm() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      if (!err.response) {
+      const parsed = formatApiError(err);
+      if (parsed.type === 'network') {
         setLocalError(
           `Cannot connect to backend at ${apiClient.getServerUrl()}. Please check network connectivity or ensure the backend service is running.`
         );
@@ -148,8 +185,10 @@ export default function LoginForm() {
         setLocalError(
           'Invalid email or password. Please use one of the demo credentials below (e.g. admin@polytrack.com / Admin@123456).'
         );
+      } else if (err.response?.status === 403) {
+        setLocalError('This studio account has been deactivated or restricted.');
       } else {
-        setLocalError(err.response?.data?.message || 'Login failed. Please try again.');
+        setLocalError(parsed.message || 'Login failed. Please try again.');
       }
     }
   };
@@ -240,6 +279,23 @@ export default function LoginForm() {
           transition={{ duration: 0.2, ease: 'easeOut', delay: 0.05 }}
           className="lg:col-span-6 xl:col-span-5 space-y-3.5"
         >
+          {/* Query Reason Banner (Session Expired, Unauthorized, Deactivated) */}
+          {reasonBanner && (
+            <div
+              className={`p-3 rounded-[10px] border flex items-start gap-2.5 text-xs text-left ${
+                reasonBanner.type === 'danger'
+                  ? 'bg-destructive/10 border-destructive/25 text-destructive'
+                  : 'bg-warning/10 border-warning/25 text-warning'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold text-text">{reasonBanner.title}</p>
+                <p className="text-text-secondary leading-relaxed">{reasonBanner.desc}</p>
+              </div>
+            </div>
+          )}
+
           {/* Quick Demo Login Panel */}
           <div className="rounded-[12px] border border-border bg-surface p-4 shadow-[var(--shadow-pop)] space-y-3">
             <div className="flex items-center justify-between pb-2.5 border-b border-border">

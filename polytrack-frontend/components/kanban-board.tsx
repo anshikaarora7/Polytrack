@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ErrorWarningCard } from '@/components/ui/error-warning';
 import {
   Plus,
   Loader2,
@@ -34,6 +35,7 @@ export default function KanbanBoard() {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [boardError, setBoardError] = useState<{ title?: string; message: string; details?: string[] } | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
   // Forms
@@ -73,6 +75,7 @@ export default function KanbanBoard() {
     data: kanbanData,
     mutate: mutateKanban,
     isLoading: loadingKanban,
+    error: kanbanError,
   } = useSWR(selectedProjectId ? `kanban-${selectedProjectId}` : null, () =>
     selectedProjectId ? apiClient.getKanbanTasks(selectedProjectId) : null
   );
@@ -134,7 +137,7 @@ export default function KanbanBoard() {
         mutateTaskDetails();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to move task');
+      setBoardError(formatApiError(err));
     }
   };
 
@@ -142,6 +145,7 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!taskForm.title || !selectedProjectId) return;
     setIsSubmitting(true);
+    setBoardError(null);
     try {
       await apiClient.createTask({
         title: taskForm.title,
@@ -169,7 +173,7 @@ export default function KanbanBoard() {
       setStatusMessage('Task created successfully!');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create task');
+      setBoardError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -179,6 +183,7 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!commentText.trim() || !selectedTask) return;
     setIsSubmitting(true);
+    setBoardError(null);
     try {
       await apiClient.addTaskComment(
         selectedTask.id,
@@ -191,7 +196,7 @@ export default function KanbanBoard() {
       mutateTaskDetails();
       mutateKanban();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to add comment');
+      setBoardError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -201,6 +206,7 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!uploadFile || !selectedTask) return;
     setIsSubmitting(true);
+    setBoardError(null);
     try {
       await apiClient.uploadTaskAttachment(selectedTask.id, uploadFile);
       setUploadFile(null);
@@ -209,7 +215,7 @@ export default function KanbanBoard() {
       setStatusMessage('Attachment uploaded to studio storage!');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to upload attachment');
+      setBoardError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -222,7 +228,7 @@ export default function KanbanBoard() {
       mutateTaskAttachments();
       mutateTaskDetails();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete attachment');
+      setBoardError(formatApiError(err));
     }
   };
 
@@ -230,6 +236,7 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!selectedTask || !timeHours) return;
     setIsSubmitting(true);
+    setBoardError(null);
     try {
       await apiClient.logTime(selectedTask.id, timeDate, Number(timeHours), timeNotes || undefined);
       setTimeHours(2);
@@ -238,7 +245,7 @@ export default function KanbanBoard() {
       setStatusMessage('Time entry logged!');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to log time');
+      setBoardError(formatApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -277,6 +284,42 @@ export default function KanbanBoard() {
           <CheckCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
           <span>{statusMessage}</span>
         </div>
+      )}
+
+      {boardError && (
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-[8px] text-danger text-xs flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={1.75} />
+            <div>
+              <p className="font-semibold">{boardError.title || 'Action Failed'}</p>
+              <p>{boardError.message}</p>
+              {boardError.details && boardError.details.length > 0 && (
+                <ul className="mt-1 list-disc list-inside space-y-0.5">
+                  {boardError.details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setBoardError(null)}
+            className="text-danger hover:opacity-80 p-0.5 text-sm leading-none"
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {kanbanError && (
+        <ErrorWarningCard
+          error={kanbanError}
+          type="server"
+          title="Failed to Load Kanban Board"
+          message="Could not load tasks for the selected project. Please check backend connectivity."
+          onRetry={() => mutateKanban()}
+        />
       )}
 
       {/* Project Selector Bar */}

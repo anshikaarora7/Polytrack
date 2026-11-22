@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, formatApiError } from '@/lib/api-client';
+import { ErrorWarningCard } from '@/components/ui/error-warning';
 import AssetTurntableModal from '@/components/asset-turntable-modal';
 import PipelineFlow from '@/components/PipelineFlow';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -131,30 +132,22 @@ const STATUS_DOTS: Record<string, { dotClass: string; label: string }> = {
 export default function DashboardOverview() {
   const [turntableAsset, setTurntableAsset] = useState<any | null>(null);
 
-  const { data: stats, isLoading: statsLoading } = useSWR<DashboardStats>(
-    'dashboard-stats',
-    () => apiClient.getDashboardStats()
-  );
-  const { data: activity } = useSWR<Activity[]>(
-    'dashboard-activity',
-    () => apiClient.getDashboardActivity()
-  );
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+    mutate: mutateStats,
+  } = useSWR<DashboardStats>('dashboard-stats', () => apiClient.getDashboardStats());
+  const { data: activity } = useSWR<Activity[]>('dashboard-activity', () => apiClient.getDashboardActivity());
   const { data: projectsProgress } = useSWR<ProjectProgress[]>(
     'dashboard-projects-progress',
     () => apiClient.getProjectsProgress()
   );
-  const { data: deadlines } = useSWR<Deadline[]>(
-    'dashboard-upcoming-deadlines',
-    () => apiClient.getUpcomingDeadlines()
+  const { data: deadlines } = useSWR<Deadline[]>('dashboard-upcoming-deadlines', () =>
+    apiClient.getUpcomingDeadlines()
   );
-  const { data: recentAssets } = useSWR(
-    'dashboard-recent-assets',
-    () => apiClient.getRecentAssets(6)
-  );
-  const { data: timesheetsData } = useSWR(
-    'dashboard-timesheets',
-    () => apiClient.getTimesheets()
-  );
+  const { data: recentAssets } = useSWR('dashboard-recent-assets', () => apiClient.getRecentAssets(6));
+  const { data: timesheetsData } = useSWR('dashboard-timesheets', () => apiClient.getTimesheets());
 
   const progressItems: ProjectProgress[] = Array.isArray(projectsProgress) ? projectsProgress : [];
   const deadlineItems: Deadline[] = Array.isArray(deadlines) ? deadlines : [];
@@ -166,6 +159,8 @@ export default function DashboardOverview() {
     completion: p.completionPercent ?? 0,
   }));
 
+  const parsedError = statsError ? formatApiError(statsError) : null;
+
   return (
     <div className="space-y-6">
       {/* 3D Turntable Modal */}
@@ -173,6 +168,20 @@ export default function DashboardOverview() {
         <AssetTurntableModal
           asset={turntableAsset}
           onClose={() => setTurntableAsset(null)}
+        />
+      )}
+
+      {/* Backend / API Warning Alert if stats request failed */}
+      {parsedError && (
+        <ErrorWarningCard
+          type={parsedError.type}
+          statusCode={parsedError.statusCode}
+          title={parsedError.title}
+          message={parsedError.message}
+          error={statsError}
+          onRetry={() => mutateStats()}
+          showDashboardLink={false}
+          showBackLink={false}
         />
       )}
 
