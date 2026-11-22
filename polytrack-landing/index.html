@@ -916,6 +916,10 @@ footer {
 
 @media (max-width: 640px) {
   .nav-links { display: none; }
+  .nav-github-btn { display: none; }
+  .header-nav { padding: 0 1rem; }
+  .nav-actions { gap: 8px; }
+  .nav-auth-btn { padding: 6px 12px; font-size: 12px; }
   .roles-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr; }
   .hero-stage { max-width: 320px; }
@@ -950,7 +954,7 @@ footer {
     </ul>
   </nav>
   <div class="nav-actions">
-    <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle light and dark theme">
+    <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle light and dark theme" title="Toggle theme">
       <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
         <circle cx="12" cy="12" r="5"></circle>
         <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -966,11 +970,19 @@ footer {
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
       </svg>
     </button>
-    <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+    <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-secondary nav-github-btn" title="View Source on GitHub">
       <span>GitHub</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="7" y1="17" x2="17" y2="7"></line>
         <polyline points="7 7 17 7 17 17"></polyline>
+      </svg>
+    </a>
+    <a id="navAuthBtn" href="/login" class="btn btn-primary nav-auth-btn" title="Sign in to PolyTrack Studio">
+      <span id="navAuthText">Sign In</span>
+      <svg id="navAuthIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+        <polyline points="10 17 15 12 10 7"></polyline>
+        <line x1="15" y1="12" x2="3" y2="12"></line>
       </svg>
     </a>
   </div>
@@ -995,8 +1007,11 @@ footer {
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </a>
+        <a id="heroLoginBtn" href="/login" class="btn btn-secondary">
+          <span>Studio Login</span>
+        </a>
         <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-          <span>View Source Code</span>
+          <span>GitHub</span>
         </a>
       </div>
       <div class="hero-tags reveal">
@@ -1567,7 +1582,7 @@ footer {
               <polyline points="7 7 17 7 17 17"></polyline>
             </svg>
           </a>
-          <a href="http://localhost:3000/login" class="btn btn-secondary" style="padding:10px 18px; font-size:14px;">
+          <a id="ctaLoginBtn" href="/login" class="btn btn-secondary" style="padding:10px 18px; font-size:14px;">
             <span>Open Studio App</span>
           </a>
         </div>
@@ -1590,7 +1605,7 @@ footer {
   </div>
   <div class="footer-links">
     <a href="https://github.com/anshikaarora7/Polytrack" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
-    <a href="http://localhost:3000/login">Studio App</a>
+    <a id="footerLoginBtn" href="/login">Studio App</a>
     <a href="#hero">Back to Top ↑</a>
   </div>
 </footer>
@@ -1624,6 +1639,82 @@ themeToggleBtn.addEventListener('click', () => {
   const nextDark = currentTheme !== 'dark';
   updateThemeUI(nextDark);
 });
+
+// 2. Dynamic Navbar & Action Links Auth Detection
+(function initNavbarAuth() {
+  const authBtn = document.getElementById('navAuthBtn');
+  const authText = document.getElementById('navAuthText');
+  const authIcon = document.getElementById('navAuthIcon');
+  const heroLoginBtn = document.getElementById('heroLoginBtn');
+  const ctaLoginBtn = document.getElementById('ctaLoginBtn');
+  const footerLoginBtn = document.getElementById('footerLoginBtn');
+
+  // Support split hosting or environment overrides
+  const appBase = (window.__ENV && window.__ENV.NEXT_PUBLIC_APP_URL)
+    || (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_APP_URL)
+    || window.NEXT_PUBLIC_APP_URL
+    || '';
+  const loginUrl = (window.__ENV && window.__ENV.NEXT_PUBLIC_LOGIN_URL)
+    || (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_LOGIN_URL)
+    || window.NEXT_PUBLIC_LOGIN_URL
+    || (appBase ? `${appBase.replace(/\/$/, '')}/login` : '/login');
+  const dashboardUrl = (window.__ENV && window.__ENV.NEXT_PUBLIC_DASHBOARD_URL)
+    || (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_DASHBOARD_URL)
+    || window.NEXT_PUBLIC_DASHBOARD_URL
+    || (appBase ? `${appBase.replace(/\/$/, '')}/dashboard` : '/dashboard');
+
+  let isAuthenticated = false;
+  let userName = '';
+
+  try {
+    const directToken = localStorage.getItem('accessToken');
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      if (parsed?.state?.token && parsed?.state?.isAuthenticated !== false) {
+        isAuthenticated = true;
+        userName = parsed?.state?.user?.name || '';
+      }
+    }
+    if (directToken) {
+      isAuthenticated = true;
+    }
+  } catch (e) {}
+
+  if (authBtn) {
+    if (isAuthenticated) {
+      authBtn.href = dashboardUrl;
+      if (authText) authText.textContent = 'Go to Dashboard';
+      if (authIcon) {
+        authIcon.outerHTML = '<svg id="navAuthIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+      }
+      authBtn.setAttribute('title', userName ? `Signed in as ${userName} — Go to Dashboard` : 'Go to Studio Dashboard');
+    } else {
+      authBtn.href = loginUrl;
+      if (authText) authText.textContent = 'Sign In';
+      authBtn.setAttribute('title', 'Sign in to PolyTrack Studio');
+    }
+  }
+
+  if (isAuthenticated) {
+    if (heroLoginBtn) {
+      heroLoginBtn.href = dashboardUrl;
+      heroLoginBtn.innerHTML = '<span>Go to Dashboard</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    }
+    if (ctaLoginBtn) {
+      ctaLoginBtn.href = dashboardUrl;
+      ctaLoginBtn.innerHTML = '<span>Open Dashboard</span>';
+    }
+    if (footerLoginBtn) {
+      footerLoginBtn.href = dashboardUrl;
+      footerLoginBtn.textContent = 'Dashboard';
+    }
+  } else {
+    if (heroLoginBtn) heroLoginBtn.href = loginUrl;
+    if (ctaLoginBtn) ctaLoginBtn.href = loginUrl;
+    if (footerLoginBtn) footerLoginBtn.href = loginUrl;
+  }
+})();
 
 // 2. IntersectionObserver for standard .reveal items
 const io = new IntersectionObserver((entries) => {

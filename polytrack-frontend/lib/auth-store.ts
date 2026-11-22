@@ -36,6 +36,7 @@ export const useAuthStore = create<AuthStore>()(
           // Store both tokens
           apiClient.setAuthToken(response.accessToken);
           if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', response.accessToken);
             localStorage.setItem('refreshToken', response.refreshToken);
           }
 
@@ -60,6 +61,12 @@ export const useAuthStore = create<AuthStore>()(
         try {
           await apiClient.logout();
         } finally {
+          apiClient.clearAuth();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('auth-storage');
+          }
           set({
             user: null,
             token: null,
@@ -78,6 +85,16 @@ export const useAuthStore = create<AuthStore>()(
         set({ token, isAuthenticated: !!token });
         if (token) {
           apiClient.setAuthToken(token);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', token);
+          }
+        } else {
+          apiClient.clearAuth();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('auth-storage');
+          }
         }
       },
 
@@ -86,7 +103,21 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       hydrate: () => {
-        const token = localStorage.getItem('accessToken');
+        let token: string | null = null;
+        if (typeof window !== 'undefined') {
+          token = localStorage.getItem('accessToken');
+          if (!token) {
+            try {
+              const authStorage = localStorage.getItem('auth-storage');
+              if (authStorage) {
+                const parsed = JSON.parse(authStorage);
+                token = parsed?.state?.token || null;
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
         if (token) {
           apiClient.setAuthToken(token);
           set({ token, isAuthenticated: true });
@@ -98,6 +129,7 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         token: state.token,
         user: state.user,
+        isAuthenticated: state.isAuthenticated,
       }),
     }
   )
