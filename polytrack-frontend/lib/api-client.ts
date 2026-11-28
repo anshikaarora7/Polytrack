@@ -10,6 +10,16 @@ import {
 
 // Normalize API base URL: ensure no trailing slash, ensure /api suffix
 export const getApiBaseUrl = (): string => {
+  // If running in browser and accessed via LAN IP (e.g. 192.168.x.x) or non-localhost host
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return `${window.location.protocol}//${window.location.hostname}:5030/api`;
+  }
+
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!envUrl) {
     return 'http://localhost:5030/api';
@@ -83,6 +93,7 @@ class ApiClient {
     // Request interceptor — attach token and start cold-start monitor
     this.client.interceptors.request.use(
       (config) => {
+        config.baseURL = getApiBaseUrl();
         if (this.token) {
           config.headers.Authorization = `Bearer ${this.token}`;
         }
