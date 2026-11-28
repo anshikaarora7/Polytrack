@@ -8,8 +8,7 @@ import {
   Palette,
   Bone,
   Eye,
-  CheckCircle2,
-  Sparkles
+  CheckCircle2
 } from 'lucide-react';
 
 export type PipelineStageName = 'Concept' | 'Model' | 'Texture' | 'Rig' | 'Review' | 'Approved';

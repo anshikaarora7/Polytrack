@@ -230,6 +230,11 @@ class ApiClient {
   }
 
   // ── Auth ──────────────────────────────────────────────────
+  async checkEmail(email: string): Promise<{ exists: boolean; name?: string; role?: string; message?: string }> {
+    const response = await this.client.post('/auth/check-email', { email });
+    return response.data;
+  }
+
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>('/auth/login', credentials);
     return response.data;

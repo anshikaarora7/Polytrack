@@ -32,7 +32,7 @@ import {
   Search,
   Eye,
   Layers,
-  Sparkles,
+  Film,
 } from 'lucide-react';
 
 export default function KanbanBoard() {
@@ -486,7 +486,7 @@ export default function KanbanBoard() {
                     : 'text-text-muted hover:text-text'
                 }`}
               >
-                <Sparkles className="w-3 h-3 text-accent" />
+                <Film className="w-3 h-3 text-accent" />
                 <span>3D Pipeline</span>
               </button>
               <button
@@ -911,7 +911,7 @@ export default function KanbanBoard() {
 
       {/* Modal: Task Detail Drawer */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] flex flex-col justify-between">
             <div>
               {/* Header */}
@@ -1283,7 +1283,7 @@ export default function KanbanBoard() {
 
       {/* Modal: Create Task */}
       {showCreateTaskModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-lg p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text flex items-center gap-2">

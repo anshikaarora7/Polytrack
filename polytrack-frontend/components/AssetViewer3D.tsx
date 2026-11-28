@@ -182,7 +182,7 @@ function ExternalModelRenderer({ url, format, wireframe, onError, onLoaded }: Mo
   if (loading) {
     return (
       <Html center>
-        <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-background/80 backdrop-blur-md border border-border shadow-lg font-mono text-xs text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#0B0C0E]/95 border border-border shadow-lg font-mono text-xs text-muted-foreground">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
           <span>Streaming 3D Asset...</span>
         </div>
@@ -328,7 +328,7 @@ export default function AssetViewer3D({
 
       {/* Error Banner */}
       {errorMsg && (
-        <div className="absolute bottom-3 left-3 right-3 z-10 p-2.5 bg-destructive/20 border border-destructive/40 rounded-lg backdrop-blur-md flex items-center justify-between text-xs text-destructive">
+        <div className="absolute bottom-3 left-3 right-3 z-10 p-2.5 bg-destructive/20 border border-destructive/40 rounded-lg flex items-center justify-between text-xs text-destructive">
           <div className="flex items-center gap-1.5 truncate">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="truncate">{errorMsg}</span>
@@ -384,7 +384,7 @@ export default function AssetViewer3D({
           <Suspense
             fallback={
               <Html center>
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border text-xs font-mono text-muted-foreground">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#0B0C0E]/95 border border-border text-xs font-mono text-muted-foreground">
                   <Loader2 className="w-4 h-4 text-primary animate-spin" />
                   <span>Mounting Studio Stage...</span>
                 </div>

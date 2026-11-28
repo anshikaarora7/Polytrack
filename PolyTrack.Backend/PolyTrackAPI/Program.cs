@@ -97,7 +97,9 @@ builder.Services.AddScoped<IProjectAuthorizationService, ProjectAuthorizationSer
 
 // ── JWT Authentication ──────────────────────────────────────── 
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? Environment.GetEnvironmentVariable("Jwt__Secret")
     ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? builder.Configuration["Jwt:Secret"]
     ?? builder.Configuration["JwtSettings:SecretKey"]
     ?? "your-super-secret-key-min-32-characters-long-12345";
 builder.Configuration["JwtSettings:SecretKey"] = jwtSecret;
@@ -169,7 +171,9 @@ builder.Services.AddSignalR(options =>
 
 // ── CORS (React dev server, studio LAN, and cloud frontend deployments) ──
 var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL")
+    ?? Environment.GetEnvironmentVariable("FrontendUrl")
     ?? builder.Configuration["FRONTEND_URL"]
+    ?? builder.Configuration["FrontendUrl"]
     ?? builder.Configuration["Cors:FrontendUrl"];
 
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")

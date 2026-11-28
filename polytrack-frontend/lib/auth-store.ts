@@ -33,11 +33,13 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const response: AuthResponse = await apiClient.login({ email, password });
 
-          // Store both tokens
+          // Store both tokens in localStorage and cookies for middleware edge verification
           apiClient.setAuthToken(response.accessToken);
           if (typeof window !== 'undefined') {
             localStorage.setItem('accessToken', response.accessToken);
             localStorage.setItem('refreshToken', response.refreshToken);
+            document.cookie = `accessToken=${response.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+            document.cookie = `polytrack_session=1; path=/; max-age=604800; SameSite=Lax`;
           }
 
           set({
@@ -66,6 +68,8 @@ export const useAuthStore = create<AuthStore>()(
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('auth-storage');
+            document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+            document.cookie = 'polytrack_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
           }
           set({
             user: null,
@@ -87,6 +91,8 @@ export const useAuthStore = create<AuthStore>()(
           apiClient.setAuthToken(token);
           if (typeof window !== 'undefined') {
             localStorage.setItem('accessToken', token);
+            document.cookie = `accessToken=${token}; path=/; max-age=604800; SameSite=Lax`;
+            document.cookie = `polytrack_session=1; path=/; max-age=604800; SameSite=Lax`;
           }
         } else {
           apiClient.clearAuth();
@@ -94,6 +100,8 @@ export const useAuthStore = create<AuthStore>()(
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('auth-storage');
+            document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+            document.cookie = 'polytrack_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
           }
         }
       },

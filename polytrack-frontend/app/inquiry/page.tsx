@@ -18,7 +18,6 @@ import {
   FileText,
   DollarSign,
   Calendar,
-  Sparkles,
   Loader2,
   AlertCircle
 } from 'lucide-react';

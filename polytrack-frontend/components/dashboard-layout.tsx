@@ -25,7 +25,6 @@ import {
   ChevronRight,
   Command,
   CheckCircle2,
-  Sparkles,
   ExternalLink
 } from 'lucide-react';
 
@@ -265,7 +264,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
         {/* Mobile Bottom Navigation Bar (<768px) */}
         <nav
           aria-label="Mobile Navigation"
-          className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface/95 backdrop-blur-md border-t border-border z-30 flex items-center justify-around px-2 shadow-lg"
+          className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface border-t border-border z-30 flex items-center justify-around px-2 shadow-lg"
         >
           {navItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -288,7 +287,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
 
       {/* Command Palette Modal (Cmd/Ctrl + K) */}
       {commandPaletteOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-start justify-center pt-24 p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center pt-24 p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-lg bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] overflow-hidden">
             <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-border">
               <Search className="w-4 h-4 text-text-muted" strokeWidth={1.75} />
@@ -341,7 +340,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
 
       {/* Blender Addon Modal */}
       {showBlenderModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-lg p-6 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-5">
             <div className="flex items-start justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2.5">

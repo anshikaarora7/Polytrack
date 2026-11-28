@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { X, Box, Layers, RotateCw, ZoomIn, Eye, Sparkles, Download } from 'lucide-react';
+import { X, Box, Layers, RotateCw, ZoomIn, Eye, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AssetTurntableModalProps {
@@ -69,7 +69,8 @@ export default function AssetTurntableModal({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
 
@@ -214,7 +215,7 @@ export default function AssetTurntableModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="relative w-full max-w-4xl bg-surface border border-border rounded-[12px] overflow-hidden shadow-[var(--shadow-pop)] flex flex-col md:flex-row max-h-[90vh]">
         {/* Left: 3D Viewport Stage */}
         <div className="relative flex-1 min-h-[380px] md:min-h-[500px] bg-surface-2 overflow-hidden">

@@ -154,10 +154,15 @@ export default function LoginHeroBackground3D() {
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [isTabVisible, setIsTabVisible] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check reduced motion preference
+    // Check mobile viewport & reduced motion preference
     if (typeof window !== 'undefined') {
+      setIsMobile(window.innerWidth < 768);
+      const handleResize = () => setIsMobile(window.innerWidth < 768);
+      window.addEventListener('resize', handleResize);
+
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setReducedMotion(mediaQuery.matches);
       const handleMotionChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
@@ -179,6 +184,7 @@ export default function LoginHeroBackground3D() {
       document.addEventListener('visibilitychange', handleVisibilityChange);
 
       return () => {
+        window.removeEventListener('resize', handleResize);
         mediaQuery.removeEventListener('change', handleMotionChange);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
@@ -193,32 +199,30 @@ export default function LoginHeroBackground3D() {
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
-      {/* Ambient gradient backdrops */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-primary/15 rounded-full blur-3xl" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl" />
+      {/* Subtle Studio Vignette */}
+      <div className="absolute inset-0 bg-radial from-transparent via-[#0B0C0E]/40 to-[#0B0C0E]/90 pointer-events-none" />
 
       {/* Canvas */}
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={isMobile ? [1, 1.25] : [1, 1.5]}
         camera={{ position: [0, 0, 6], fov: 45 }}
         gl={{
-          antialias: true,
+          antialias: !isMobile,
           alpha: true,
-          powerPreference: 'high-performance',
+          powerPreference: isMobile ? 'low-power' : 'high-performance',
         }}
         className="w-full h-full"
       >
         <ambientLight intensity={0.4} />
         <directionalLight position={[5, 8, 5]} intensity={1.2} color="#ffffff" />
-        <directionalLight position={[-5, -4, -2]} intensity={0.8} color="#38bdf8" />
-        <pointLight position={[0, -2, 2]} intensity={1.5} color="#c084fc" />
+        <directionalLight position={[-5, -4, -2]} intensity={0.8} color="#5e6ad2" />
+        <pointLight position={[0, -2, 2]} intensity={1.0} color="#7b86e8" />
 
-        <Float speed={reducedMotion ? 0 : 1.5} rotationIntensity={reducedMotion ? 0 : 0.4} floatIntensity={reducedMotion ? 0 : 0.6}>
+        <Float speed={reducedMotion ? 0 : 1.2} rotationIntensity={reducedMotion ? 0 : 0.3} floatIntensity={reducedMotion ? 0 : 0.5}>
           <HeroPolyhedron reducedMotion={reducedMotion} isTabVisible={isTabVisible} />
         </Float>
 
-        <FloatingParticles count={65} reducedMotion={reducedMotion} />
+        <FloatingParticles count={isMobile ? 25 : 50} reducedMotion={reducedMotion} />
       </Canvas>
     </div>
   );

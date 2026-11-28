@@ -19,7 +19,6 @@ import {
   Box,
   Layers,
   Send,
-  Sparkles,
   ThumbsUp,
   ThumbsDown,
   Loader2,
@@ -494,7 +493,7 @@ export default function AssetsManager() {
 
       {/* Modal: Create 3D Asset */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-lg p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text">Register New 3D Asset</h2>
@@ -633,7 +632,7 @@ export default function AssetsManager() {
 
       {/* Modal: Upload Version */}
       {showUploadModal && selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text">Upload 3D File Version</h2>
@@ -721,7 +720,7 @@ export default function AssetsManager() {
 
       {/* Modal: Review Approval/Rejection */}
       {showReviewModal && selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text">

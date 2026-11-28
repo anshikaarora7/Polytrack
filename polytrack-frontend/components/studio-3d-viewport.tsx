@@ -66,7 +66,8 @@ export default function Studio3DViewport({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
 
@@ -326,16 +327,16 @@ export default function Studio3DViewport({
   // Fallback for browsers with no WebGL or if explicitly broken
   if (!hasWebGL) {
     return (
-      <div className={`relative flex items-center justify-center bg-card/60 border border-border/40 rounded-xl overflow-hidden p-8 ${className}`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5 pointer-events-none" />
+      <div className={`relative flex items-center justify-center bg-surface border border-border rounded-xl overflow-hidden p-8 ${className}`}>
+        <div className="absolute inset-0 bg-[#0B0C0E]/95 pointer-events-none" />
         <div className="relative text-center space-y-3 z-10">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-lg shadow-primary/20 animate-pulse">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-surface border border-border flex items-center justify-center text-accent shadow-xs">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <div className="text-sm font-semibold text-foreground tracking-wide">PolyTrack 3D Studio Core</div>
-          <div className="text-xs text-muted-foreground max-w-xs">Interactive hardware acceleration fallback active. All studio tracking flows operational.</div>
+          <div className="text-sm font-semibold text-text tracking-wide">PolyTrack 3D Studio Core</div>
+          <div className="text-xs text-text-muted max-w-xs">Interactive hardware acceleration fallback active. All studio tracking flows operational.</div>
         </div>
       </div>
     );

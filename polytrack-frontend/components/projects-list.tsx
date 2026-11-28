@@ -245,7 +245,7 @@ export default function ProjectsList() {
 
       {/* Modal: Create Project */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-lg p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text flex items-center gap-2">

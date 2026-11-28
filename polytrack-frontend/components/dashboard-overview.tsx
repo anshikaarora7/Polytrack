@@ -21,9 +21,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Sparkles,
   Layers,
-  TrendingUp,
   SlidersHorizontal,
   ChevronRight
 } from 'lucide-react';

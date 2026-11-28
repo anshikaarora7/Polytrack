@@ -22,7 +22,7 @@ import {
   FileText,
   DollarSign,
   Calendar,
-  Sparkles,
+  FolderPlus,
   Loader2,
 } from 'lucide-react';
 
@@ -477,7 +477,7 @@ export default function ClientPortal() {
                             }}
                             className="bg-success hover:bg-success/90 text-white text-xs h-8 rounded-[8px] flex items-center gap-1.5"
                           >
-                            <Sparkles className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            <FolderPlus className="w-3.5 h-3.5" strokeWidth={1.75} />
                             Convert to Project
                           </Button>
                         )}
@@ -577,7 +577,7 @@ export default function ClientPortal() {
 
       {/* Modal: New Inquiry */}
       {showNewInquiryModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-xl max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text flex items-center gap-2">
@@ -740,7 +740,7 @@ export default function ClientPortal() {
 
       {/* Modal: Inquiry Detail & Status Update */}
       {selectedInquiry && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-start justify-between pb-3 border-b border-border">
               <div>
@@ -849,7 +849,7 @@ export default function ClientPortal() {
                   }}
                   className="rounded-[8px] bg-success hover:bg-success/90 text-white flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <FolderPlus className="w-3.5 h-3.5" strokeWidth={1.75} />
                   Convert to Project
                 </Button>
               )}
@@ -860,11 +860,11 @@ export default function ClientPortal() {
 
       {/* Modal: Convert Inquiry to Project */}
       {convertingInquiry && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-success" strokeWidth={1.75} />
+                <FolderPlus className="w-4 h-4 text-success" strokeWidth={1.75} />
                 Convert Inquiry to Project
               </h2>
               <button
@@ -935,7 +935,7 @@ export default function ClientPortal() {
 
       {/* Modal: New Client */}
       {showNewClientModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h2 className="text-base font-semibold text-text flex items-center gap-2">
