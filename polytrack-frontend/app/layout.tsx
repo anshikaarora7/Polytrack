@@ -12,6 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'PolyTrack — 3D Studio Production Tracking',
   description: 'Precision studio project and asset tracking system for high-performance 3D teams',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       {
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#fafafa' },
     { media: '(prefers-color-scheme: dark)', color: '#0f1011' },

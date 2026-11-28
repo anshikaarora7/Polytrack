@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 using System.Security.Claims;
@@ -112,7 +113,7 @@ public class UsersController : ControllerBase
 
     // ── GET /api/users
     [HttpGet]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? role,
         [FromQuery] string? search,
@@ -380,7 +381,7 @@ public class UsersController : ControllerBase
     // ── GET /api/users/workload?projectId=
     // Kitsu-style team workload view
     [HttpGet("workload")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> GetWorkload([FromQuery] Guid? projectId)
     {
         var weekStart = DateOnly.FromDateTime(

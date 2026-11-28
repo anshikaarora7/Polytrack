@@ -6,6 +6,7 @@ public enum UserRole
 {
     Admin,
     ProjectManager,
+    StudioLead,
     Artist,
     Reviewer,
     Client

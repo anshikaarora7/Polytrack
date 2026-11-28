@@ -25,6 +25,41 @@ export const getApiServerUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+// ── Cold-Start Server Health Tracker ────────────────────────
+type ServerHealthListener = (isWakingUp: boolean) => void;
+
+class ServerHealthTracker {
+  private isWakingUp = false;
+  private listeners: Set<ServerHealthListener> = new Set();
+
+  public setWakingUp(val: boolean) {
+    if (this.isWakingUp !== val) {
+      this.isWakingUp = val;
+      this.notify();
+    }
+  }
+
+  public getIsWakingUp() {
+    return this.isWakingUp;
+  }
+
+  public subscribe(fn: ServerHealthListener): () => void {
+    this.listeners.add(fn);
+    fn(this.isWakingUp);
+    return () => {
+      this.listeners.delete(fn);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((fn) => {
+      try { fn(this.isWakingUp); } catch { }
+    });
+  }
+}
+
+export const serverHealth = new ServerHealthTracker();
+
 class ApiClient {
   private client: AxiosInstance;
   private token: string | null = null;
@@ -45,25 +80,67 @@ class ApiClient {
       }
     }
 
-    // Request interceptor — attach token
+    // Request interceptor — attach token and start cold-start monitor
     this.client.interceptors.request.use(
       (config) => {
         if (this.token) {
           config.headers.Authorization = `Bearer ${this.token}`;
         }
+
+        if (typeof window !== 'undefined') {
+          const timer = setTimeout(() => {
+            serverHealth.setWakingUp(true);
+          }, 2500);
+          (config as any)._wakeTimer = timer;
+        }
+
         return config;
       },
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor — handle 401 with automatic refresh token rotation
+    // Response interceptor — handle 401 with automatic refresh token rotation & cold start recovery
     let isRefreshing = false;
     let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: any) => void }> = [];
 
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        if ((response.config as any)?._wakeTimer) {
+          clearTimeout((response.config as any)._wakeTimer);
+        }
+        serverHealth.setWakingUp(false);
+        return response;
+      },
       async (error) => {
+        if ((error.config as any)?._wakeTimer) {
+          clearTimeout((error.config as any)._wakeTimer);
+        }
+
         const originalRequest = error.config;
+        if (!originalRequest) return Promise.reject(error);
+
+        // Detect cold-start network / 502 / 503 / 504 errors on GET requests and retry once
+        const isNetworkOrCold =
+          error.code === 'ERR_NETWORK' ||
+          error.code === 'ECONNABORTED' ||
+          error.response?.status === 502 ||
+          error.response?.status === 503 ||
+          error.response?.status === 504;
+
+        if (isNetworkOrCold && !originalRequest._coldRetry && (!originalRequest.method || originalRequest.method.toLowerCase() === 'get')) {
+          originalRequest._coldRetry = true;
+          serverHealth.setWakingUp(true);
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const res = await this.client(originalRequest);
+            serverHealth.setWakingUp(false);
+            return res;
+          } catch (retryErr) {
+            serverHealth.setWakingUp(false);
+            return Promise.reject(retryErr);
+          }
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/')) {
           if (isRefreshing) {
             return new Promise((resolve, reject) => {

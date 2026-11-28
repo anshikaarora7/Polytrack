@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Core.Interfaces;
+using PolyTrackAPI.Hubs;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 using System.Security.Claims;
@@ -156,13 +159,20 @@ public class AssetsController : ControllerBase
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly IFileStorageService _fileStorage;
+    private readonly IHubContext<StudioHub, IStudioClient> _hubContext;
 
-    public AssetsController(StudioDbContext db, IConfiguration config, IWebHostEnvironment env, IFileStorageService fileStorage)
+    public AssetsController(
+        StudioDbContext db,
+        IConfiguration config,
+        IWebHostEnvironment env,
+        IFileStorageService fileStorage,
+        IHubContext<StudioHub, IStudioClient> hubContext)
     {
         _db          = db;
         _config      = config;
         _env         = env;
         _fileStorage = fileStorage;
+        _hubContext  = hubContext;
     }
 
     private Guid CurrentUserId =>
@@ -390,6 +400,20 @@ public class AssetsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
+        try
+        {
+            await _hubContext.Clients.All.AssetCreated(new
+            {
+                assetId = asset.Id,
+                name = asset.Name,
+                projectId = asset.ProjectId,
+                category = asset.Category.ToString(),
+                status = asset.Status.ToString(),
+                createdAt = asset.CreatedAt
+            });
+        }
+        catch { }
+
         return CreatedAtAction(nameof(GetById),
             new { id = asset.Id },
             new { id = asset.Id, message = "Asset created successfully" });
@@ -468,6 +492,22 @@ public class AssetsController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.AssetCreated(new
+            {
+                assetId = asset.Id,
+                name = asset.Name,
+                projectId = asset.ProjectId,
+                category = asset.Category.ToString(),
+                status = asset.Status.ToString(),
+                versionNumber = nextVersion,
+                updatedAt = asset.UpdatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { id = version.Id, versionNumber = nextVersion, message = "File uploaded successfully" });
     }
 
@@ -499,13 +539,27 @@ public class AssetsController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.AssetStatusChanged(new
+            {
+                assetId = asset.Id,
+                name = asset.Name,
+                projectId = asset.ProjectId,
+                status = "Submitted",
+                updatedAt = asset.UpdatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { message = "Asset submitted for review" });
     }
 
     // ── POST /api/assets/{id}/review
     // Reviewer approves or rejects asset
     [HttpPost("{id:guid}/review")]
-    [Authorize(Roles = "admin,reviewer,project_manager")]
+    [Authorize(Roles = Roles.ReviewersAndAbove)]
     public async Task<IActionResult> Review(Guid id, [FromBody] AssetReviewDto dto)
     {
         var asset = await _db.Assets
@@ -566,6 +620,30 @@ public class AssetsController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.AssetReviewed(new
+            {
+                assetId = asset.Id,
+                name = asset.Name,
+                projectId = asset.ProjectId,
+                status = asset.Status.ToString(),
+                approved = dto.Approved,
+                reviewerId = CurrentUserId,
+                updatedAt = asset.UpdatedAt
+            });
+            await _hubContext.Clients.All.AssetStatusChanged(new
+            {
+                assetId = asset.Id,
+                name = asset.Name,
+                projectId = asset.ProjectId,
+                status = asset.Status.ToString(),
+                updatedAt = asset.UpdatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { message = $"Asset {action} successfully" });
     }
 
@@ -596,7 +674,7 @@ public class AssetsController : ControllerBase
 
     // ── DELETE /api/assets/{id}
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var asset = await _db.Assets.FindAsync(id);
@@ -620,6 +698,12 @@ public class AssetsController : ControllerBase
 
         if (version == null)
             return NotFound(new { message = "Version not found" });
+
+        if (version.FilePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            version.FilePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return Redirect(version.FilePath);
+        }
 
         var fileResult = await _fileStorage.GetFileAsync(version.FilePath);
         if (fileResult == null)
@@ -704,6 +788,23 @@ public class AssetsController : ControllerBase
 
         _db.AssetComments.Add(comment);
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.CommentAdded(new
+            {
+                entityType = "Asset",
+                entityId = asset.Id,
+                projectId = asset.ProjectId,
+                commentId = comment.Id,
+                body = comment.Body,
+                authorId = CurrentUserId,
+                statusChangeTo = comment.StatusChangeTo?.ToString(),
+                createdAt = comment.CreatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { id = comment.Id, message = "Comment added" });
     }
 

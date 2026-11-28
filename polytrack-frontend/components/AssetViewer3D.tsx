@@ -6,7 +6,7 @@ import { OrbitControls, Environment, Grid, Center, Html } from '@react-three/dre
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { Loader2, AlertCircle, RotateCcw, Box, Eye, Layers } from 'lucide-react';
+import { Loader2, AlertCircle, RotateCcw, Box, Eye, Layers, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface AssetViewer3DProps {
@@ -211,13 +211,19 @@ export default function AssetViewer3D({
 }: AssetViewer3DProps) {
   const [wireframe, setWireframe] = useState<boolean>(false);
   const [isRotating, setIsRotating] = useState<boolean>(autoRotate);
+  const [lightingPreset, setLightingPreset] = useState<'studio' | 'warm' | 'cyber'>('studio');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [isTabVisible, setIsTabVisible] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const checkMobile = () => setIsMobile(window.innerWidth < 768);
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setReducedMotion(mediaQuery.matches);
       const handleMotion = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
@@ -235,6 +241,7 @@ export default function AssetViewer3D({
       document.addEventListener('visibilitychange', handleVisibility);
 
       return () => {
+        window.removeEventListener('resize', checkMobile);
         mediaQuery.removeEventListener('change', handleMotion);
         document.removeEventListener('visibilitychange', handleVisibility);
       };
@@ -270,7 +277,27 @@ export default function AssetViewer3D({
       </div>
 
       {/* Top Controls Overlay */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 flex-wrap justify-end">
+        {/* Studio Lighting Toggle */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const nextPreset: Record<string, 'studio' | 'warm' | 'cyber'> = {
+              studio: 'warm',
+              warm: 'cyber',
+              cyber: 'studio',
+            };
+            setLightingPreset(nextPreset[lightingPreset]);
+          }}
+          className="h-7 px-2 text-[10px] font-mono rounded-[8px] border bg-surface hover:bg-surface-2 text-text-muted transition-colors capitalize"
+          title={`Lighting: ${lightingPreset}`}
+        >
+          <Sun className="w-3 h-3 mr-1 text-warning" strokeWidth={1.75} />
+          <span>{lightingPreset}</span>
+        </Button>
+
         {showWireframeToggle && (
           <Button
             type="button"
@@ -319,19 +346,40 @@ export default function AssetViewer3D({
       {/* 3D Canvas Stage */}
       <div className="flex-1 w-full h-full min-h-0 relative">
         <Canvas
-          dpr={[1, 1.5]}
+          dpr={isMobile ? [1, 1.25] : [1, 1.5]}
           camera={{ position: [0, 1.8, 3.8], fov: 45 }}
           gl={{
-            antialias: true,
+            antialias: !isMobile,
             alpha: true,
-            powerPreference: 'high-performance',
+            powerPreference: isMobile ? 'low-power' : 'high-performance',
           }}
-          className="w-full h-full cursor-grab active:cursor-grabbing"
+          className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
         >
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[6, 8, 5]} intensity={1.5} color="#ffffff" castShadow />
-          <directionalLight position={[-6, 4, -4]} intensity={0.8} color="#818cf8" />
-          <pointLight position={[0, -2, 2]} intensity={0.6} color="#38bdf8" />
+          {/* Dynamic Studio Lighting Presets */}
+          {lightingPreset === 'studio' && (
+            <>
+              <ambientLight intensity={0.6} />
+              <directionalLight position={[6, 8, 5]} intensity={1.5} color="#ffffff" castShadow={!isMobile} />
+              <directionalLight position={[-6, 4, -4]} intensity={0.8} color="#818cf8" />
+              <pointLight position={[0, -2, 2]} intensity={0.6} color="#38bdf8" />
+            </>
+          )}
+          {lightingPreset === 'warm' && (
+            <>
+              <ambientLight intensity={0.5} />
+              <directionalLight position={[6, 8, 5]} intensity={1.8} color="#fef08a" castShadow={!isMobile} />
+              <directionalLight position={[-6, 4, -4]} intensity={0.7} color="#fb923c" />
+              <pointLight position={[0, -2, 2]} intensity={0.6} color="#f97316" />
+            </>
+          )}
+          {lightingPreset === 'cyber' && (
+            <>
+              <ambientLight intensity={0.4} />
+              <directionalLight position={[6, 8, 5]} intensity={1.6} color="#06b6d4" castShadow={!isMobile} />
+              <directionalLight position={[-6, 4, -4]} intensity={1.2} color="#ec4899" />
+              <pointLight position={[0, -2, 2]} intensity={0.8} color="#a855f7" />
+            </>
+          )}
 
           <Suspense
             fallback={
@@ -375,14 +423,15 @@ export default function AssetViewer3D({
             minDistance={1.2}
             maxDistance={12}
             maxPolarAngle={Math.PI / 2 + 0.05}
+            touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
           />
         </Canvas>
       </div>
 
       {/* Footer Instruction Hint */}
       <div className="px-3 py-1.5 bg-surface border-t border-border flex items-center justify-between text-[10px] font-mono text-text-muted select-none">
-        <span>Click & Drag to Orbit • Scroll to Zoom</span>
-        <span className="text-accent font-medium">Studio PBR</span>
+        <span>Touch / Drag to Orbit • Pinch to Zoom</span>
+        <span className="text-accent font-medium capitalize">{lightingPreset} Light</span>
       </div>
     </div>
   );

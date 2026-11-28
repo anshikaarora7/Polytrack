@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Core.Interfaces;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
@@ -154,7 +155,7 @@ public class InquiriesController : ControllerBase
 
     // ── GET /api/inquiries (PM & Admin listing) ──────────────────
     [HttpGet]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? status,
         [FromQuery] string? search,
@@ -263,7 +264,7 @@ public class InquiriesController : ControllerBase
 
     // ── PATCH /api/inquiries/{id}/status ─────────────────────────
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateInquiryStatusDto dto)
     {
         var inquiry = await _db.ProjectInquiries.FindAsync(id);
@@ -284,7 +285,7 @@ public class InquiriesController : ControllerBase
     // ── POST /api/inquiries/{id}/convert ─────────────────────────
     // Converts inquiry into an official studio Project + Client record
     [HttpPost("{id:guid}/convert")]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Convert(Guid id, [FromBody] ConvertInquiryDto dto)
     {
         var inquiry = await _db.ProjectInquiries.FindAsync(id);

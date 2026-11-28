@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.DTOs.Projects;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
@@ -171,7 +172,7 @@ public class ProjectsController : ControllerBase
 
     // ── POST /api/projects ────────────────────────────────────
     [HttpPost]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Create([FromBody] CreateProjectDto dto)
     {
         if (!ModelState.IsValid)
@@ -235,7 +236,7 @@ public class ProjectsController : ControllerBase
 
     // ── PUT /api/projects/{id} ────────────────────────────────
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectDto dto)
     {
         var project = await _db.Projects.FindAsync(id);
@@ -292,7 +293,7 @@ public class ProjectsController : ControllerBase
 
     // ── DELETE /api/projects/{id} ─────────────────────────────
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var project = await _db.Projects.FindAsync(id);
@@ -328,7 +329,7 @@ public class ProjectsController : ControllerBase
 
     // ── POST /api/projects/{id}/members ───────────────────────
     [HttpPost("{id:guid}/members")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> AddMember(Guid id, [FromBody] AddMemberDto dto)
     {
         var project = await _db.Projects.FindAsync(id);
@@ -360,7 +361,7 @@ public class ProjectsController : ControllerBase
 
     // ── DELETE /api/projects/{id}/members/{userId} ────────────
     [HttpDelete("{id:guid}/members/{userId:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> RemoveMember(Guid id, Guid userId)
     {
         var member = await _db.ProjectMembers

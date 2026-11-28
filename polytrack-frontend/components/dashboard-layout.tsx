@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getApiBaseUrl } from '@/lib/api-client';
+import { useStudioLiveSync } from '@/lib/use-studio-live-sync';
+import StudioColdStartBanner from '@/components/ui/cold-start-banner';
 import ThemeToggle from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +47,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { isConnected, isReconnecting } = useStudioLiveSync();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showBlenderModal, setShowBlenderModal] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -183,6 +186,9 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
 
       {/* Main App Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-bg">
+        {/* Cold-Start Interceptor Banner */}
+        <StudioColdStartBanner />
+
         {/* Thin Top Bar (48px) */}
         <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between shrink-0">
           {/* Breadcrumbs & Mobile Menu Toggle */}
@@ -231,20 +237,53 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
-            {/* Server Status Indicator */}
-            <div className="hidden lg:flex items-center gap-1.5 pl-2 text-[11px] text-text-muted font-mono border-l border-border h-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span>5030 API</span>
+            {/* Real-Time SignalR Live Status Indicator */}
+            <div className="flex items-center gap-1.5 pl-2 text-[11px] font-mono border-l border-border h-5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isConnected
+                    ? 'bg-success animate-pulse'
+                    : isReconnecting
+                    ? 'bg-warning animate-ping'
+                    : 'bg-text-muted'
+                }`}
+              />
+              <span className="hidden sm:inline text-text-muted">
+                {isConnected ? 'Studio Live' : isReconnecting ? 'Reconnecting' : 'Offline'}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* Content Area with 24px Padding & 1280px Max Width */}
+        {/* Content Area with Mobile-Safe Padding (pb-20 on mobile to clear bottom nav) */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-[1280px] mx-auto w-full">
+          <div className="p-4 sm:p-6 pb-24 md:pb-6 max-w-[1280px] mx-auto w-full">
             {children}
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation Bar (<768px) */}
+        <nav
+          aria-label="Mobile Navigation"
+          className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface/95 backdrop-blur-md border-t border-border z-30 flex items-center justify-around px-2 shadow-lg"
+        >
+          {navItems.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.name.toLowerCase();
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+                  isActive ? 'text-accent font-semibold' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                <Icon className="w-4 h-4 mb-0.5" strokeWidth={isActive ? 2.2 : 1.75} />
+                <span className="text-[10px] tracking-tight">{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Command Palette Modal (Cmd/Ctrl + K) */}
@@ -347,7 +386,7 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
               <ol className="list-decimal pl-4 space-y-1 text-[11px] text-text-muted">
                 <li>Open Blender &gt; Edit &gt; Preferences &gt; Add-ons.</li>
                 <li>Click &quot;Install...&quot; and choose the downloaded .zip.</li>
-                <li>Enable the addon checkbox and set API URL to <code className="font-mono text-accent">http://localhost:5030/api</code>.</li>
+                <li>Enable the addon checkbox and set API URL to <code className="font-mono text-accent">{getApiBaseUrl()}</code>.</li>
               </ol>
             </div>
           </div>

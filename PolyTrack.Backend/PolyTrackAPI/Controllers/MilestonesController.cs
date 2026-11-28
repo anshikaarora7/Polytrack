@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 using System.Security.Claims;
@@ -197,7 +198,7 @@ public class MilestonesController : ControllerBase
 
     // ── POST /api/milestones
     [HttpPost]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Create([FromBody] CreateMilestoneDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -247,7 +248,7 @@ public class MilestonesController : ControllerBase
 
     // ── PUT /api/milestones/{id}
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMilestoneDto dto)
     {
         var milestone = await _db.Milestones.FindAsync(id);
@@ -308,7 +309,7 @@ public class MilestonesController : ControllerBase
 
     // ── DELETE /api/milestones/{id}
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var milestone = await _db.Milestones
@@ -333,7 +334,7 @@ public class MilestonesController : ControllerBase
     // ── POST /api/milestones/{id}/reorder
     // Reorder milestones by passing new sort order values
     [HttpPost("reorder")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Reorder([FromBody] List<MilestoneReorderDto> items)
     {
         foreach (var item in items)

@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Core.Interfaces;
+using PolyTrackAPI.Hubs;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 using System.Security.Claims;
@@ -143,11 +146,16 @@ public class TasksController : ControllerBase
 {
     private readonly StudioDbContext _db;
     private readonly IFileStorageService _fileStorage;
+    private readonly IHubContext<StudioHub, IStudioClient> _hubContext;
 
-    public TasksController(StudioDbContext db, IFileStorageService fileStorage)
+    public TasksController(
+        StudioDbContext db,
+        IFileStorageService fileStorage,
+        IHubContext<StudioHub, IStudioClient> hubContext)
     {
         _db = db;
         _fileStorage = fileStorage;
+        _hubContext = hubContext;
     }
 
     private Guid CurrentUserId =>
@@ -308,10 +316,16 @@ public class TasksController : ControllerBase
     [HttpGet("kanban")]
     public async Task<IActionResult> GetKanban([FromQuery] Guid projectId)
     {
-        var tasks = await _db.Tasks
+        var query = _db.Tasks
             .Include(t => t.AssignedToNavigation)
             .Include(t => t.Milestone)
-            .Where(t => t.ProjectId == projectId)
+            .Where(t => t.ProjectId == projectId);
+
+        // Artists only see tasks assigned to them
+        if (CurrentUserRole == "artist")
+            query = query.Where(t => t.AssignedTo == CurrentUserId);
+
+        var tasks = await query
             .Select(t => new TaskListItemDto
             {
                 Id            = t.Id,
@@ -351,7 +365,7 @@ public class TasksController : ControllerBase
 
     // ── POST /api/tasks
     [HttpPost]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Title))
@@ -421,6 +435,21 @@ public class TasksController : ControllerBase
             });
             await _db.SaveChangesAsync();
         }
+
+        try
+        {
+            await _hubContext.Clients.All.TaskCreated(new
+            {
+                taskId = task.Id,
+                title = task.Title,
+                projectId = task.ProjectId,
+                status = task.Status.ToString(),
+                priority = task.Priority.ToString(),
+                assignedTo = task.AssignedTo,
+                createdAt = task.CreatedAt
+            });
+        }
+        catch { }
 
         return CreatedAtAction(nameof(GetById),
             new { id = task.Id },
@@ -562,12 +591,27 @@ public class TasksController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.TaskMoved(new
+            {
+                taskId = task.Id,
+                title = task.Title,
+                projectId = task.ProjectId,
+                oldStatus = oldStatus,
+                newStatus = task.Status.ToString(),
+                updatedAt = task.UpdatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { message = "Task moved", status = dto.Status });
     }
 
     // ── DELETE /api/tasks/{id}
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var task = await _db.Tasks.FindAsync(id);
@@ -675,6 +719,23 @@ public class TasksController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            await _hubContext.Clients.All.CommentAdded(new
+            {
+                entityType = "Task",
+                entityId = task.Id,
+                projectId = task.ProjectId,
+                commentId = comment.Id,
+                body = comment.Body,
+                authorId = CurrentUserId,
+                statusChangeTo = comment.StatusChangeTo?.ToString(),
+                createdAt = comment.CreatedAt
+            });
+        }
+        catch { }
+
         return Ok(new { id = comment.Id, message = "Comment added" });
     }
 

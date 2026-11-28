@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient, formatApiError } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/auth-store';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ErrorWarningCard } from '@/components/ui/error-warning';
@@ -25,11 +26,36 @@ import {
   Download,
   AlertTriangle,
   Minus,
+  LayoutGrid,
+  ListFilter,
+  SlidersHorizontal,
+  Search,
+  Eye,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 
 export default function KanbanBoard() {
+  const { user } = useAuthStore();
+  const userRole = (user?.role || '').toLowerCase();
+  const isArtist = userRole === 'artist';
+  const isStudioLeadOrAdmin = ['studiolead', 'studio_lead', 'admin', 'projectmanager', 'project_manager'].includes(userRole);
+
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
+
+  // View & Pipeline Toggles
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [pipelineMode, setPipelineMode] = useState<'studio' | 'status'>('studio');
+
+  // List View Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [stageFilter, setStageFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
+
+  // Optimistic Tasks State
+  const [localTasks, setLocalTasks] = useState<any[]>([]);
 
   // Modals
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -80,6 +106,19 @@ export default function KanbanBoard() {
     selectedProjectId ? apiClient.getKanbanTasks(selectedProjectId) : null
   );
 
+  // Sync kanbanData into localTasks for Optimistic UI
+  useEffect(() => {
+    if (kanbanData) {
+      const merged = [
+        ...(kanbanData.new || []).map((t: any) => ({ ...t, status: t.status || 'New' })),
+        ...(kanbanData.inProgress || []).map((t: any) => ({ ...t, status: t.status || 'InProgress' })),
+        ...(kanbanData.review || []).map((t: any) => ({ ...t, status: t.status || 'Review' })),
+        ...(kanbanData.done || []).map((t: any) => ({ ...t, status: t.status || 'Done' })),
+      ];
+      setLocalTasks(merged);
+    }
+  }, [kanbanData]);
+
   // Users & Milestones for current project
   const { data: usersData } = useSWR('users-list', () => apiClient.getUsers());
   const allUsers = usersData?.data || [];
@@ -107,12 +146,74 @@ export default function KanbanBoard() {
     () => (selectedTask?.id ? apiClient.getTaskAttachments(selectedTask.id) : [])
   );
 
-  const columns = [
-    { id: 'New', title: 'New & Backlog', tasks: kanbanData?.new || [] },
-    { id: 'InProgress', title: 'In Progress', tasks: kanbanData?.inProgress || [] },
-    { id: 'Review', title: 'Review & QA', tasks: kanbanData?.review || [] },
-    { id: 'Done', title: 'Done', tasks: kanbanData?.done || [] },
+  // Helper to map 3D studio stages: Concept -> Modeling -> Rigging -> Texturing -> Lighting -> Final Render
+  const classifyStudioStage = (task: any): string => {
+    if (task.customStage) return task.customStage;
+    const text = ((task.title || '') + ' ' + (task.description || '') + ' ' + (task.milestoneName || '')).toLowerCase();
+    const status = (task.status || '').toLowerCase();
+
+    if (status === 'done' || status === 'approved') return 'Final Render';
+    if (text.includes('rig') || text.includes('skeleton') || text.includes('bone') || text.includes('armature') || text.includes('weight')) return 'Rigging';
+    if (text.includes('texture') || text.includes('substance') || text.includes('material') || text.includes('uv') || text.includes('shader') || text.includes('pbr')) return 'Texturing';
+    if (text.includes('light') || text.includes('lookdev') || text.includes('camera') || text.includes('turntable') || text.includes('shadow')) return 'Lighting';
+    if (text.includes('concept') || text.includes('art') || text.includes('sketch') || text.includes('storyboard') || text.includes('mood')) return 'Concept';
+    if (text.includes('model') || text.includes('mesh') || text.includes('sculpt') || text.includes('topo') || text.includes('prop') || text.includes('asset') || text.includes('character')) return 'Modeling';
+
+    if (status === 'new' || status === 'assigned') return 'Concept';
+    if (status === 'inprogress') return 'Modeling';
+    if (status === 'review' || status === 'submitted') return 'Lighting';
+    return 'Concept';
+  };
+
+  // Studio 6-stage columns vs Standard status columns
+  const studioColumns = [
+    { id: 'Concept', title: '1. Concept', color: 'bg-warning', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Concept') },
+    { id: 'Modeling', title: '2. Modeling', color: 'bg-info', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Modeling') },
+    { id: 'Rigging', title: '3. Rigging', color: 'bg-purple-500', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Rigging') },
+    { id: 'Texturing', title: '4. Texturing', color: 'bg-accent', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Texturing') },
+    { id: 'Lighting', title: '5. Lighting', color: 'bg-amber-500', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Lighting') },
+    { id: 'Final Render', title: '6. Final Render', color: 'bg-success', tasks: localTasks.filter(t => classifyStudioStage(t) === 'Final Render') },
   ];
+
+  const statusColumns = [
+    { id: 'New', title: 'New & Backlog', color: 'bg-text-muted', tasks: localTasks.filter(t => (t.status || 'New') === 'New' || t.status === 'Assigned') },
+    { id: 'InProgress', title: 'In Progress', color: 'bg-warning', tasks: localTasks.filter(t => t.status === 'InProgress') },
+    { id: 'Review', title: 'Review & QA', color: 'bg-info', tasks: localTasks.filter(t => t.status === 'Review' || t.status === 'Submitted') },
+    { id: 'Done', title: 'Done & Approved', color: 'bg-success', tasks: localTasks.filter(t => t.status === 'Done' || t.status === 'Approved') },
+  ];
+
+  const columns = pipelineMode === 'studio' ? studioColumns : statusColumns;
+
+  // Filtered tasks for List View
+  const filteredListTasks = useMemo(() => {
+    return localTasks.filter((task) => {
+      // Search
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = task.title?.toLowerCase().includes(query);
+        const matchesDesc = task.description?.toLowerCase().includes(query);
+        const matchesMilestone = task.milestoneName?.toLowerCase().includes(query);
+        const matchesAssignee = task.assignedTo?.name?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesDesc && !matchesMilestone && !matchesAssignee) return false;
+      }
+      // Priority
+      if (priorityFilter !== 'all' && (task.priority || '').toLowerCase() !== priorityFilter.toLowerCase()) {
+        return false;
+      }
+      // Stage / Status
+      if (stageFilter !== 'all') {
+        const currentStage = classifyStudioStage(task);
+        if (currentStage.toLowerCase() !== stageFilter.toLowerCase() && (task.status || '').toLowerCase() !== stageFilter.toLowerCase()) {
+          return false;
+        }
+      }
+      // Assignee
+      if (assigneeFilter !== 'all' && task.assignedTo?.id !== assigneeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [localTasks, searchQuery, priorityFilter, stageFilter, assigneeFilter]);
 
   const getPriorityDot = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -128,8 +229,26 @@ export default function KanbanBoard() {
     }
   };
 
-  const handleMoveTask = async (taskId: string, newStatus: string, e?: React.MouseEvent) => {
+  // Optimistic task movement across columns
+  const handleMoveTask = async (taskId: string, targetStageOrStatus: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+
+    let newStatus = targetStageOrStatus;
+    if (targetStageOrStatus === 'Concept') newStatus = 'New';
+    else if (['Modeling', 'Rigging', 'Texturing'].includes(targetStageOrStatus)) newStatus = 'InProgress';
+    else if (targetStageOrStatus === 'Lighting') newStatus = 'Review';
+    else if (targetStageOrStatus === 'Final Render') newStatus = 'Done';
+
+    // Optimistically update local state immediately
+    const prevTasks = [...localTasks];
+    setLocalTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, status: newStatus, customStage: targetStageOrStatus }
+          : t
+      )
+    );
+
     try {
       await apiClient.moveTask(taskId, newStatus);
       mutateKanban();
@@ -137,6 +256,8 @@ export default function KanbanBoard() {
         mutateTaskDetails();
       }
     } catch (err: any) {
+      // Rollback on failure
+      setLocalTasks(prevTasks);
       setBoardError(formatApiError(err));
     }
   };
@@ -257,25 +378,32 @@ export default function KanbanBoard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-[-0.01em] text-text">Kanban & Production Tasks</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.01em] text-text">3D Pipeline & Tasks</h1>
             <span className="text-xs px-2 py-0.5 rounded-[8px] bg-accent-tint text-accent font-medium border border-border">
-              Phase 2
+              {pipelineMode === 'studio' ? 'Studio 6-Stage' : 'Standard'}
             </span>
           </div>
           <p className="text-sm text-text-muted mt-0.5">
-            Track asset creation, assign artist tasks, manage attachments, and log hours
+            Concept → Modeling → Rigging → Texturing → Lighting → Final Render
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            onClick={() => setShowCreateTaskModal(true)}
-            disabled={!selectedProjectId}
-            className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5 text-sm h-9 px-3.5 shadow-none"
-          >
-            <Plus className="w-4 h-4" strokeWidth={1.75} />
-            <span>New Task</span>
-          </Button>
+          {isArtist ? (
+            <div className="px-3 py-1.5 rounded-[8px] bg-accent/10 border border-accent/20 text-accent text-xs flex items-center gap-2">
+              <User className="w-3.5 h-3.5" strokeWidth={2} />
+              <span className="font-medium">Artist View: Your Assigned Studio Tasks</span>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setShowCreateTaskModal(true)}
+              disabled={!selectedProjectId}
+              className="rounded-[8px] bg-accent hover:bg-accent-hover text-white flex items-center gap-1.5 text-sm h-9 px-3.5 shadow-none"
+            >
+              <Plus className="w-4 h-4" strokeWidth={1.75} />
+              <span>New Task</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -322,27 +450,93 @@ export default function KanbanBoard() {
         />
       )}
 
-      {/* Project Selector Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-surface p-3 rounded-[8px] border border-border shadow-[var(--shadow-pop)]">
-        <label htmlFor="project" className="text-xs font-medium text-text-muted">
-          Active Project:
-        </label>
-        <select
-          id="project"
-          value={selectedProjectId}
-          onChange={(e) => setSelectedProjectId(e.target.value)}
-          className="px-3 py-1.5 bg-surface border border-border rounded-[8px] text-text text-sm font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent max-w-sm"
-        >
-          {projects.length === 0 && <option value="">No projects available</option>}
-          {projects.map((p: any) => (
-            <option key={p.id} value={p.id}>
-              {p.name} {p.projectCode ? `(${p.projectCode})` : ''} - {p.status}
-            </option>
-          ))}
-        </select>
+      {/* Project Selector & Mode Switcher Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-2.5 rounded-[8px] border border-border shadow-[var(--shadow-pop)]">
+        {/* Project Dropdown */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="project" className="text-xs font-medium text-text-muted hidden sm:inline">
+            Project:
+          </label>
+          <select
+            id="project"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="px-2.5 py-1.5 bg-surface-2 border border-border rounded-[8px] text-text text-xs font-medium focus:outline-none focus:border-accent max-w-[180px] sm:max-w-xs"
+          >
+            {projects.length === 0 && <option value="">No projects available</option>}
+            {projects.map((p: any) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.projectCode ? `(${p.projectCode})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* View Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Pipeline Mode Toggle (Kanban Only) */}
+          {viewMode === 'kanban' && (
+            <div className="flex items-center bg-surface-2 border border-border rounded-[8px] p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setPipelineMode('studio')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-medium transition-colors ${
+                  pipelineMode === 'studio'
+                    ? 'bg-surface text-accent shadow-xs'
+                    : 'text-text-muted hover:text-text'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-accent" />
+                <span>3D Pipeline</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPipelineMode('status')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-medium transition-colors ${
+                  pipelineMode === 'status'
+                    ? 'bg-surface text-accent shadow-xs'
+                    : 'text-text-muted hover:text-text'
+                }`}
+              >
+                <Layers className="w-3 h-3 text-text-muted" />
+                <span>Status Board</span>
+              </button>
+            </div>
+          )}
+
+          {/* Kanban vs Filterable List Toggle */}
+          <div className="flex items-center bg-surface-2 border border-border rounded-[8px] p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] font-medium transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-surface text-accent shadow-xs'
+                  : 'text-text-muted hover:text-text'
+              }`}
+              title="Kanban Board View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Board</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-surface text-accent shadow-xs'
+                  : 'text-text-muted hover:text-text'
+              }`}
+              title="Filterable List View"
+            >
+              <ListFilter className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Kanban Columns */}
+      {/* Main Content: Kanban Board or Filterable List */}
       {!selectedProjectId ? (
         <div className="flex items-center justify-center py-16 text-text-muted text-sm">
           <p>Please select a project to load tasks.</p>
@@ -351,8 +545,15 @@ export default function KanbanBoard() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 animate-spin text-accent" strokeWidth={1.75} />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      ) : viewMode === 'kanban' ? (
+        /* Kanban Board View */
+        <div
+          className={`grid gap-3.5 ${
+            pipelineMode === 'studio'
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+          }`}
+        >
           {columns.map((column) => (
             <div
               key={column.id}
@@ -368,7 +569,7 @@ export default function KanbanBoard() {
                 const taskId = e.dataTransfer.getData('text/plain');
                 if (taskId) handleMoveTask(taskId, column.id);
               }}
-              className={`space-y-3 bg-surface border rounded-[12px] p-3.5 min-h-[550px] flex flex-col justify-between transition-colors shadow-[var(--shadow-pop)] ${
+              className={`space-y-3 bg-surface border rounded-[12px] p-3 min-h-[500px] flex flex-col justify-between transition-colors shadow-[var(--shadow-pop)] ${
                 dragOverColumnId === column.id
                   ? 'border-accent ring-1 ring-accent/30 bg-accent-tint/30'
                   : 'border-border'
@@ -377,30 +578,20 @@ export default function KanbanBoard() {
               <div>
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2.5 border-b border-border mb-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        column.id === 'New'
-                          ? 'bg-text-muted'
-                          : column.id === 'InProgress'
-                          ? 'bg-warning'
-                          : column.id === 'Review'
-                          ? 'bg-info'
-                          : 'bg-success'
-                      }`}
-                    />
-                    <h3 className="font-semibold text-text text-sm">{column.title}</h3>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${column.color}`} />
+                    <h3 className="font-semibold text-text text-xs sm:text-sm truncate">{column.title}</h3>
                   </div>
-                  <span className="px-2 py-0.5 bg-surface-2 rounded-full text-xs font-medium text-text-muted tabular-nums">
+                  <span className="px-1.5 py-0.2 bg-surface-2 rounded-full text-[11px] font-medium text-text-muted tabular-nums">
                     {column.tasks?.length || 0}
                   </span>
                 </div>
 
                 {/* Tasks List */}
-                <div className="space-y-2.5 min-h-[100px]">
+                <div className="space-y-2 min-h-[100px]">
                   {column.tasks?.length === 0 ? (
                     <div className="py-8 text-center text-xs text-text-muted border border-dashed border-border rounded-[8px]">
-                      Drop tasks here or add below
+                      Drop here
                     </div>
                   ) : (
                     <AnimatePresence mode="popLayout">
@@ -434,7 +625,6 @@ export default function KanbanBoard() {
                               <h4 className="font-medium text-text text-xs leading-snug line-clamp-2">
                                 {task.title}
                               </h4>
-                              {/* Linear Priority Dot */}
                               <span
                                 className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${getPriorityDot(pKey)}`}
                                 title={`Priority: ${task.priority}`}
@@ -451,7 +641,7 @@ export default function KanbanBoard() {
                               <div className="flex items-center gap-1.5">
                                 {task.assignedTo ? (
                                   <div
-                                    className="w-4 h-4 rounded-full bg-accent-tint text-accent flex items-center justify-center text-[10px] font-semibold"
+                                    className="w-4 h-4 rounded-full bg-accent-tint text-accent flex items-center justify-center text-[10px] font-semibold shrink-0"
                                     title={task.assignedTo.name}
                                   >
                                     {task.assignedTo.name.charAt(0).toUpperCase()}
@@ -459,7 +649,7 @@ export default function KanbanBoard() {
                                 ) : (
                                   <span className="text-[10px] text-text-muted">Unassigned</span>
                                 )}
-                                <span className="truncate max-w-[80px] text-[11px]">
+                                <span className="truncate max-w-[70px] text-[11px]">
                                   {task.assignedTo?.name || ''}
                                 </span>
                               </div>
@@ -471,38 +661,29 @@ export default function KanbanBoard() {
                                   }`}
                                 >
                                   <Calendar className="w-3 h-3" strokeWidth={1.75} />
-                                  {new Date(task.dueDate).toLocaleDateString()}
+                                  {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
                                 </span>
                               )}
                             </div>
 
                             {/* Quick lane transition buttons */}
                             <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-border/50">
-                              {column.id !== 'InProgress' && column.id !== 'Done' && (
+                              {column.id !== 'Review' && column.id !== 'Final Render' && column.id !== 'Done' && (
                                 <button
-                                  onClick={(e) => handleMoveTask(task.id, 'InProgress', e)}
-                                  title="Move to In Progress"
-                                  className="px-2 py-0.5 text-[10px] rounded-[4px] bg-surface-2 hover:bg-accent-tint hover:text-accent text-text-muted transition-colors"
-                                >
-                                  → In Progress
-                                </button>
-                              )}
-                              {column.id === 'InProgress' && (
-                                <button
-                                  onClick={(e) => handleMoveTask(task.id, 'Review', e)}
-                                  title="Move to Review"
+                                  onClick={(e) => handleMoveTask(task.id, pipelineMode === 'studio' ? 'Lighting' : 'Review', e)}
+                                  title="Submit for Review"
                                   className="px-2 py-0.5 text-[10px] rounded-[4px] bg-surface-2 hover:bg-accent-tint hover:text-accent text-text-muted transition-colors"
                                 >
                                   → Review
                                 </button>
                               )}
-                              {column.id === 'Review' && (
+                              {(column.id === 'Review' || column.id === 'Lighting') && (
                                 <button
-                                  onClick={(e) => handleMoveTask(task.id, 'Done', e)}
+                                  onClick={(e) => handleMoveTask(task.id, pipelineMode === 'studio' ? 'Final Render' : 'Done', e)}
                                   title="Mark as Done"
                                   className="px-2 py-0.5 text-[10px] rounded-[4px] bg-success/10 text-success hover:bg-success/20 transition-colors"
                                 >
-                                  ✓ Done
+                                  ✓ Approved
                                 </button>
                               )}
                             </div>
@@ -514,18 +695,217 @@ export default function KanbanBoard() {
                 </div>
               </div>
 
-              {/* Add Task Lane Footer */}
-              <button
-                onClick={() => {
-                  setShowCreateTaskModal(true);
-                }}
-                className="w-full mt-3 p-2 border border-dashed border-border rounded-[8px] text-text-muted hover:text-text hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5 text-xs"
-              >
-                <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                <span>Add Task</span>
-              </button>
+              {/* Add Task Lane Footer (Leads & Admins only) */}
+              {!isArtist && (
+                <button
+                  onClick={() => setShowCreateTaskModal(true)}
+                  className="w-full mt-3 p-1.5 border border-dashed border-border rounded-[8px] text-text-muted hover:text-text hover:border-accent/40 transition-colors flex items-center justify-center gap-1 text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <span>Add Task</span>
+                </button>
+              )}
             </div>
           ))}
+        </div>
+      ) : (
+        /* Filterable, Horizontally Scrollable List View */
+        <div className="space-y-3">
+          {/* List Filter Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-surface border border-border rounded-[8px] shadow-[var(--shadow-pop)] text-xs">
+            {/* Search Input */}
+            <div className="flex-1 min-w-[180px] relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Filter tasks by name, artist, milestone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-surface-2 border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            {/* Stage Filter */}
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-surface-2 border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
+            >
+              <option value="all">All Stages</option>
+              <option value="Concept">1. Concept</option>
+              <option value="Modeling">2. Modeling</option>
+              <option value="Rigging">3. Rigging</option>
+              <option value="Texturing">4. Texturing</option>
+              <option value="Lighting">5. Lighting</option>
+              <option value="Final Render">6. Final Render</option>
+            </select>
+
+            {/* Priority Filter */}
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-surface-2 border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
+            >
+              <option value="all">All Priorities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+
+            {/* Assignee Filter */}
+            <select
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-surface-2 border border-border rounded-[8px] text-text text-xs focus:outline-none focus:border-accent"
+            >
+              <option value="all">All Artists</option>
+              {allUsers.map((u: any) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop Table View (horizontally scrollable overflow-x-auto) */}
+          <div className="hidden md:block overflow-x-auto border border-border rounded-[10px] bg-surface shadow-[var(--shadow-pop)]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border bg-surface-2 text-text-muted font-medium">
+                  <th className="p-3">Task Name</th>
+                  <th className="p-3">3D Stage</th>
+                  <th className="p-3">Priority</th>
+                  <th className="p-3">Assigned Artist</th>
+                  <th className="p-3">Milestone</th>
+                  <th className="p-3">Due Date</th>
+                  <th className="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredListTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-text-muted">
+                      No studio tasks match your filter criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredListTasks.map((task) => {
+                    const stage = classifyStudioStage(task);
+                    const pKey = (task.priority || 'Normal').toLowerCase();
+
+                    return (
+                      <tr
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className="hover:bg-surface-2/60 cursor-pointer transition-colors"
+                      >
+                        <td className="p-3 font-medium text-text max-w-xs truncate">
+                          {task.title}
+                        </td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-[6px] bg-surface-2 border border-border text-[11px] font-medium text-text">
+                            {stage}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDot(pKey)}`} />
+                            <span className="capitalize">{task.priority || 'Normal'}</span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            {task.assignedTo ? (
+                              <>
+                                <div className="w-4 h-4 rounded-full bg-accent-tint text-accent flex items-center justify-center text-[10px] font-semibold">
+                                  {task.assignedTo.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span>{task.assignedTo.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-text-muted italic">Unassigned</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 text-text-muted">
+                          {task.milestoneName || '—'}
+                        </td>
+                        <td className="p-3">
+                          {task.dueDate ? (
+                            <span className={task.isOverdue ? 'text-danger font-medium' : 'text-text-muted'}>
+                              {new Date(task.dueDate).toLocaleDateString()}
+                            </span>
+                          ) : (
+                            <span className="text-text-muted">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTask(task);
+                            }}
+                            className="px-2.5 py-1 rounded-[6px] bg-surface-2 hover:bg-accent-tint hover:text-accent border border-border text-xs font-medium transition-colors"
+                          >
+                            Inspect
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Stacked Card View (<768px) */}
+          <div className="md:hidden space-y-2.5">
+            {filteredListTasks.length === 0 ? (
+              <div className="p-8 text-center text-xs text-text-muted border border-dashed border-border rounded-[8px]">
+                No studio tasks match your filter criteria.
+              </div>
+            ) : (
+              filteredListTasks.map((task) => {
+                const stage = classifyStudioStage(task);
+                const pKey = (task.priority || 'Normal').toLowerCase();
+
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => setSelectedTask(task)}
+                    className="p-3 bg-surface border border-border rounded-[8px] shadow-xs active:bg-surface-2 transition-colors space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium text-text text-xs leading-snug">{task.title}</h4>
+                      <span className={`w-2 h-2 rounded-full shrink-0 mt-0.5 ${getPriorityDot(pKey)}`} />
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                      <span className="px-2 py-0.5 rounded-[6px] bg-surface-2 border border-border font-medium text-text">
+                        {stage}
+                      </span>
+                      {task.milestoneName && (
+                        <span className="text-text-muted truncate max-w-[120px]">
+                          {task.milestoneName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-text-muted pt-2 border-t border-border">
+                      <span>{task.assignedTo?.name || 'Unassigned'}</span>
+                      {task.dueDate && (
+                        <span className={task.isOverdue ? 'text-danger font-medium' : ''}>
+                          {new Date(task.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 

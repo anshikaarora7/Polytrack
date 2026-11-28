@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 
@@ -90,7 +91,7 @@ public class ClientsController : ControllerBase
 
     // ── GET /api/clients ──────────────────────────────────────
     [HttpGet]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? search,
         [FromQuery] bool? activeOnly,
@@ -218,7 +219,7 @@ public class ClientsController : ControllerBase
 
     // ── POST /api/clients ─────────────────────────────────────
     [HttpPost]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Create([FromBody] CreateClientDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.ContactName) || string.IsNullOrWhiteSpace(dto.Email))
@@ -251,7 +252,7 @@ public class ClientsController : ControllerBase
 
     // ── PUT /api/clients/{id} ─────────────────────────────────
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "admin,project_manager,projectmanager")]
+    [Authorize(Roles = Roles.LeadsAndAbove)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateClientDto dto)
     {
         var client = await _db.Clients.FindAsync(id);

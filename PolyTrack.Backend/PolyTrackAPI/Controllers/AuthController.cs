@@ -148,10 +148,17 @@ public class AuthController : ControllerBase
             new Claim("userId", user.Id.ToString())
         };
 
-        if (user.Role == UserRole.ProjectManager)
+        if (user.Role == UserRole.StudioLead || user.Role == UserRole.ProjectManager || user.Role == UserRole.Admin)
         {
+            claims.Add(new Claim(ClaimTypes.Role, "studiolead"));
+            claims.Add(new Claim(ClaimTypes.Role, "StudioLead"));
             claims.Add(new Claim(ClaimTypes.Role, "project_manager"));
             claims.Add(new Claim(ClaimTypes.Role, "projectmanager"));
+        }
+        else if (user.Role == UserRole.Artist)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "artist"));
+            claims.Add(new Claim(ClaimTypes.Role, "Artist"));
         }
 
         var token = new JwtSecurityToken(

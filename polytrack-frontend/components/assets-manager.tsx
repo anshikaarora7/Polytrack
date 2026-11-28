@@ -28,6 +28,7 @@ import {
 import dynamic from 'next/dynamic';
 import AssetTurntableModal from '@/components/asset-turntable-modal';
 import PipelineFlow from '@/components/PipelineFlow';
+import AssetPreviewDrawer from '@/components/asset-preview-drawer';
 
 const AssetViewer3D = dynamic(
   () => import('@/components/AssetViewer3D'),
@@ -607,205 +608,28 @@ export default function AssetsManager() {
         </div>
       )}
 
-      {/* Modal: Asset Detail Drawer */}
-      {selectedAsset && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-[12px] shadow-[var(--shadow-pop)] flex flex-col justify-between space-y-4">
-            <div>
-              {/* Header */}
-              <div className="flex items-start justify-between pb-3 border-b border-border">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-semibold text-text">{assetDetail?.name || selectedAsset.name}</h2>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[8px] bg-surface-2 border border-border text-xs text-text font-medium">
-                      <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(assetDetail?.status || selectedAsset.status || '')}`} />
-                      <span className="capitalize">{assetDetail?.status || selectedAsset.status}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setTurntableAsset(assetDetail || selectedAsset)}
-                      className="px-2 py-0.5 rounded-[8px] bg-accent-tint hover:bg-accent hover:text-white text-accent border border-accent/20 text-xs font-medium inline-flex items-center gap-1 transition-colors"
-                    >
-                      <Rotate3d className="w-3.5 h-3.5" strokeWidth={1.75} />
-                      <span>3D Turntable</span>
-                    </button>
-                  </div>
-                  <p className="text-xs text-text-muted mt-0.5">
-                    {assetDetail?.projectName || selectedAsset.projectName} • {assetDetail?.category || selectedAsset.category}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedAsset(null)}
-                  className="text-text-muted hover:text-text text-sm p-1"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Description */}
-              {assetDetail?.description && (
-                <p className="text-xs text-text-muted mt-2.5 leading-relaxed">
-                  {assetDetail.description}
-                </p>
-              )}
-
-              {/* 3D Production Pipeline Flow Visualization */}
-              <PipelineFlow
-                currentStage={assetDetail?.status || selectedAsset.status}
-                className="mt-4"
-              />
-
-              {/* Interactive 3D Model Viewport */}
-              <div className="mt-4">
-                <AssetViewer3D
-                  url={
-                    assetDetail?.versions?.[0]?.id
-                      ? `${apiClient.getServerUrl()}/api/assets/${selectedAsset.id}/download/${assetDetail.versions[0].id}`
-                      : undefined
-                  }
-                  assetName={assetDetail?.name || selectedAsset.name}
-                  category={assetDetail?.category || selectedAsset.category}
-                  polygonCount={
-                    assetDetail?.versions?.[0]?.polygonCount || selectedAsset?.polygonCount || 24500
-                  }
-                  className="w-full h-72 rounded-[12px]"
-                  autoRotate={true}
-                />
-              </div>
-
-              {/* Review & Upload Action Bar */}
-              <div className="mt-4 p-3 bg-surface-2 border border-border rounded-[8px] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => setShowUploadModal(true)}
-                    className="rounded-[8px] bg-accent hover:bg-accent-hover text-white text-xs flex items-center gap-1.5 h-8"
-                  >
-                    <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
-                    Upload Version
-                  </Button>
-
-                  {/* Submit for review button (artist/author) */}
-                  {(assetDetail?.status === 'Draft' || selectedAsset.status === 'Draft') && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleSubmitForReview}
-                      disabled={isSubmitting}
-                      className="rounded-[8px] text-xs flex items-center gap-1.5 h-8"
-                    >
-                      <Send className="w-3.5 h-3.5" strokeWidth={1.75} />
-                      Submit for Review
-                    </Button>
-                  )}
-                </div>
-
-                {/* Reviewer / Admin Actions */}
-                {(assetDetail?.status === 'Submitted' ||
-                  assetDetail?.status === 'Review' ||
-                  selectedAsset.status === 'Submitted' ||
-                  selectedAsset.status === 'Review') &&
-                  (userRole === 'admin' ||
-                    userRole === 'reviewer' ||
-                    userRole === 'projectmanager' ||
-                    userRole === 'project_manager') && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setReviewApproved(true);
-                          setShowReviewModal(true);
-                        }}
-                        className="rounded-[8px] bg-success hover:bg-success/90 text-white text-xs flex items-center gap-1 h-8"
-                      >
-                        <ThumbsUp className="w-3 h-3" strokeWidth={1.75} />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setReviewApproved(false);
-                          setShowReviewModal(true);
-                        }}
-                        className="rounded-[8px] bg-danger hover:bg-danger/90 text-white text-xs flex items-center gap-1 h-8"
-                      >
-                        <ThumbsDown className="w-3 h-3" strokeWidth={1.75} />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-              </div>
-
-              {/* Version History Table */}
-              <div className="mt-4 space-y-2">
-                <h3 className="text-xs font-semibold text-text uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-accent" strokeWidth={1.75} /> Version History ({assetDetail?.versions?.length || 0})
-                </h3>
-
-                <div className="border border-border rounded-[8px] overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-surface-2 border-b border-border text-text-muted">
-                      <tr>
-                        <th className="p-2.5">Version</th>
-                        <th className="p-2.5">File Name</th>
-                        <th className="p-2.5">Polygons</th>
-                        <th className="p-2.5">Status</th>
-                        <th className="p-2.5">Uploaded</th>
-                        <th className="p-2.5 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {assetDetail?.versions?.length ? (
-                        assetDetail.versions.map((ver: any) => (
-                          <tr key={ver.id} className="hover:bg-surface-2 transition-colors">
-                            <td className="p-2.5 font-semibold text-accent">V{ver.versionNumber}</td>
-                            <td className="p-2.5 font-mono text-text">{ver.fileName}</td>
-                            <td className="p-2.5 text-text-muted tabular-nums">
-                              {ver.polygonCount ? `${ver.polygonCount.toLocaleString()} polys` : '—'}
-                            </td>
-                            <td className="p-2.5 capitalize">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(ver.status || 'draft')}`} />
-                                <span>{ver.status}</span>
-                              </div>
-                            </td>
-                            <td className="p-2.5 text-text-muted">
-                              {new Date(ver.uploadedAt).toLocaleDateString()}
-                            </td>
-                            <td className="p-2.5 text-right">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDownloadVersion(selectedAsset.id, ver.id, ver.fileName)}
-                                className="h-6 text-[10px] px-2 rounded-[6px] flex items-center gap-1"
-                              >
-                                <Download className="w-3 h-3" strokeWidth={1.75} />
-                                Download
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="p-4 text-center text-text-muted text-xs">
-                            No version files uploaded yet. Click &quot;Upload Version&quot; above.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-border flex justify-end">
-              <Button size="sm" variant="outline" onClick={() => setSelectedAsset(null)} className="rounded-[8px] text-xs">
-                Close
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Slide-over Interactive 3D Asset Preview Drawer */}
+      <AssetPreviewDrawer
+        isOpen={Boolean(selectedAsset)}
+        selectedAsset={selectedAsset}
+        assetDetail={assetDetail}
+        userRole={userRole}
+        isSubmitting={isSubmitting}
+        onClose={() => setSelectedAsset(null)}
+        onOpenTurntable={() => setTurntableAsset(assetDetail || selectedAsset)}
+        onUploadVersion={() => setShowUploadModal(true)}
+        onSubmitForReview={handleSubmitForReview}
+        onReviewApprove={() => {
+          setReviewApproved(true);
+          setShowReviewModal(true);
+        }}
+        onReviewReject={() => {
+          setReviewApproved(false);
+          setShowReviewModal(true);
+        }}
+        onDownloadVersion={handleDownloadVersion}
+        getStatusDot={getStatusDot}
+      />
 
       {/* Modal: Upload Version */}
       {showUploadModal && selectedAsset && (

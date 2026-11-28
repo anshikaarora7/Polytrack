@@ -1,0 +1,29 @@
+{
+  "name": "PolyTrack — 3D Studio Production Tracking",
+  "short_name": "PolyTrack",
+  "description": "Precision studio project, asset, and pipeline tracking system for high-performance 3D animation and game teams",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f1011",
+  "theme_color": "#5e6ad2",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-light-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PolyTrackAPI.Core.Constants;
 using PolyTrackAPI.Core.Interfaces;
+using PolyTrackAPI.Hubs;
 using PolyTrackAPI.Infrastructure.Data;
 using PolyTrackAPI.Infrastructure.Models;
 using PolyTrackAPI.Infrastructure.Services;
@@ -133,15 +134,37 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole(Roles.Admin));
-    options.AddPolicy("RequireProjectManager", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager));
-    options.AddPolicy("RequireReviewer", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.Reviewer));
-    options.AddPolicy("RequireInternal", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.Artist, Roles.Reviewer));
-    options.AddPolicy("RequireClient", policy => policy.RequireRole(Roles.Client));
+    options.AddPolicy("RequireProjectManager", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.StudioLead, "admin", "projectmanager", "studiolead"));
+    options.AddPolicy("RequireStudioLead", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.StudioLead, "admin", "projectmanager", "studiolead"));
+    options.AddPolicy("RequireArtist", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.StudioLead, Roles.Artist, "admin", "projectmanager", "studiolead", "artist"));
+    options.AddPolicy("RequireReviewer", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.StudioLead, Roles.Reviewer, "admin", "projectmanager", "studiolead", "reviewer"));
+    options.AddPolicy("RequireInternal", policy => policy.RequireRole(Roles.Admin, Roles.ProjectManager, Roles.StudioLead, Roles.Artist, Roles.Reviewer, "admin", "projectmanager", "studiolead", "artist", "reviewer"));
+    options.AddPolicy("RequireClient", policy => policy.RequireRole(Roles.Client, "client"));
+});
+
+// ── SignalR Real-Time Studio Synchronization ─────────────────
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
 });
 
 // ── CORS (React dev server, studio LAN, and cloud frontend deployments) ──
@@ -240,6 +263,12 @@ app.Lifetime.ApplicationStarted.Register(async () =>
             await context.Database.EnsureCreatedAsync();
         }
 
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'studio_lead';");
+        }
+        catch { }
+
         // 1. Seed or verify Demo Users
         var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@polytrack.com";
         var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "Admin@123456";
@@ -248,7 +277,8 @@ app.Lifetime.ApplicationStarted.Register(async () =>
         var demoUsers = new[]
         {
             (Guid.Parse("550e8400-e29b-41d4-a716-446655440000"), adminName, adminEmail, UserRole.Admin),
-            (Guid.Parse("550e8400-e29b-41d4-a716-446655440001"), "Sarah Connor (PM)", "pm@polytrack.com", UserRole.ProjectManager),
+            (Guid.Parse("550e8400-e29b-41d4-a716-446655440001"), "Sarah Connor (Studio Lead)", "pm@polytrack.com", UserRole.StudioLead),
+            (Guid.Parse("550e8400-e29b-41d4-a716-446655440005"), "Marcus Vance (Studio Lead)", "lead@polytrack.com", UserRole.StudioLead),
             (Guid.Parse("550e8400-e29b-41d4-a716-446655440002"), "Alex Rivera (Lead Artist)", "artist@polytrack.com", UserRole.Artist),
             (Guid.Parse("550e8400-e29b-41d4-a716-446655440003"), "Elena Rostova (Reviewer)", "reviewer@polytrack.com", UserRole.Reviewer),
             (Guid.Parse("550e8400-e29b-41d4-a716-446655440004"), "David Vance (Client)", "client@polytrack.com", UserRole.Client),
@@ -575,6 +605,7 @@ app.UseMiddleware<AccountStatusMiddleware>(); // Validates account status on eve
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<StudioHub>("/hubs/studio");
 
 app.Run();
 
